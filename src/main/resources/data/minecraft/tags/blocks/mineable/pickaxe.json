@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "webdisplays:screen",
+    "webdisplays:kb_left",
+    "webdisplays:kb_right",
+    "webdisplays:rctrl",
+    "webdisplays:redctrl",
+    "webdisplays:server"
+  ]
+}

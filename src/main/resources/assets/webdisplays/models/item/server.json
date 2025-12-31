@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "particle": "webdisplays:block/server",
+    "down": "webdisplays:block/server2",
+    "up": "webdisplays:block/server2",
+    "north": "webdisplays:block/server",
+    "east": "webdisplays:block/server",
+    "south": "webdisplays:block/server",
+    "west": "webdisplays:block/server"
+  }
+}

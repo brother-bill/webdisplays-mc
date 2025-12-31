@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "D",
+    "C",
+    "B"
+  ],
+  "key": {
+    "D": {
+      "item": "webdisplays:craftcomp_laserdiode",
+      "data": 5
+    },
+    "C": {
+      "item": "webdisplays:craftcomp_batcell",
+      "data": 3
+    },
+    "B": {
+      "item": "minecraft:oak_button"
+    }
+  },
+  "result": {
+    "item": "webdisplays:laserpointer",
+    "count": 1
+  }
+}

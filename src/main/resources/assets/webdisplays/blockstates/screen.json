@@ -1,0 +1,7 @@
+{
+	"variants": {
+		"": {
+			"model": "webdisplays:block/screen"
+		}
+	}
+}

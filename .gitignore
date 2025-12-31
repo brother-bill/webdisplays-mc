@@ -1,0 +1,28 @@
+# Eclipse
+bin/
+*.launch
+.settings/
+.metadata/
+.classpath
+.project
+
+# IntelliJ IDEA
+out/
+*.ipr
+*.iws
+*.iml
+.idea/
+
+# Gradle
+build/
+.gradle/
+
+# Runtime directories
+runs/
+run/
+logs/
+
+# Other
+eclipse/
+/_OLD/
+*.log

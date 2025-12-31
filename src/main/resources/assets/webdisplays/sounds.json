@@ -1,0 +1,45 @@
+{
+  "keyboard_type": {
+    "category": "block",
+    "sounds": [
+      "webdisplays:keyboard1",
+      "webdisplays:keyboard2",
+      "webdisplays:keyboard3",
+      "webdisplays:keyboard4",
+      "webdisplays:keyboard5",
+      "webdisplays:keyboard6",
+      "webdisplays:keyboard7",
+      "webdisplays:keyboard8"
+    ]
+  },
+  "upgrade_add": {
+    "category": "block",
+    "sounds": [
+      "webdisplays:upgrade_add"
+    ]
+  },
+  "upgrade_del": {
+    "category": "block",
+    "sounds": [
+      "webdisplays:upgrade_del"
+    ]
+  },
+  "screencfg_open": {
+    "category": "master",
+    "sounds": [
+      "webdisplays:screencfg_open"
+    ]
+  },
+  "server": {
+    "category": "master",
+    "sounds": [
+      "webdisplays:server"
+    ]
+  },
+  "ironic": {
+    "category": "player",
+    "sounds": [
+      "webdisplays:ironic"
+    ]
+  }
+}

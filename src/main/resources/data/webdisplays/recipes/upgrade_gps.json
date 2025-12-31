@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [ "UE" ],
+  "key": {
+    "U": {
+      "item": "webdisplays:craftcomp_upgrade",
+      "data": 1
+    },
+    "E": {
+      "item": "minecraft:ender_eye"
+    }
+  },
+  "result": {
+    "item": "webdisplays:upgrade_gps",
+    "data": 3,
+    "count": 1
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "refmap": "webdisplays.refmap.json",
+  "package": "net.montoyo.wd.mixins",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+  ],
+  "client": [
+    "MouseHandlerMixin",
+    "OverlayMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

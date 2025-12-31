@@ -1,0 +1,14 @@
+{
+  "display": {
+    "icon": { "item": "webdisplays:screen" },
+    "title": { "translate": "advancements.webdisplays.upgrade.title" },
+    "description": { "translate": "advancements.webdisplays.upgrade.description" },
+    "frame": "task"
+  },
+  "parent": "webdisplays:pad_break",
+  "criteria": {
+    "upgrade_screen": {
+      "trigger": "webdisplays:upgrade_screen"
+    }
+  }
+}

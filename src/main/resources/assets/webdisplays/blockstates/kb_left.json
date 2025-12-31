@@ -1,0 +1,10 @@
+{
+  "forge_marker": 1,
+  "uvlock": false,
+  "variants": {
+    "facing=north,type=default_peripheral_keyboard": { "model": "webdisplays:block/kb_left"             },
+    "facing=east,type=default_peripheral_keyboard": { "model": "webdisplays:block/kb_left", "y": 90.0  },
+    "facing=south,type=default_peripheral_keyboard": { "model": "webdisplays:block/kb_left", "y": 180.0 },
+    "facing=west,type=default_peripheral_keyboard": { "model": "webdisplays:block/kb_left", "y": 270.0 }
+  }
+}

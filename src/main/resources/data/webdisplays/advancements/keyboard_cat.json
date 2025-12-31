@@ -1,0 +1,14 @@
+{
+  "display": {
+    "icon": { "item": "minecraft:string" },
+    "title": { "translate": "advancements.webdisplays.keyboardcat.title" },
+    "description": { "translate": "advancements.webdisplays.keyboardcat.description" },
+    "frame": "task"
+  },
+  "parent": "webdisplays:link_peripheral",
+  "criteria": {
+    "keyboard_cat": {
+      "trigger": "webdisplays:keyboard_cat"
+    }
+  }
+}
