@@ -1,6 +1,6 @@
 # WebDisplays for NeoForge 1.21.1
 
-An unofficial port of WebDisplays to NeoForge 1.21.1. This mod allows you to create screens in your Minecraft world and browse the internet!
+An unofficial vibecoded port of WebDisplays to NeoForge 1.21.1. This mod allows you to create screens in your Minecraft world and browse the internet!
 
 ## Features
 
