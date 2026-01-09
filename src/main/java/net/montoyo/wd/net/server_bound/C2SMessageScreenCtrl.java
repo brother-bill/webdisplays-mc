@@ -146,6 +146,33 @@ public class C2SMessageScreenCtrl extends Packet {
         return ret;
     }
 
+    /**
+     * Toggle video sync enabled/disabled for a screen.
+     */
+    public static C2SMessageScreenCtrl syncEnabled(ScreenBlockEntity tes, BlockSide side, boolean enabled) {
+        C2SMessageScreenCtrl ret = base(tes, side);
+        ret.control = new SyncEnabledControl(enabled);
+        return ret;
+    }
+
+    /**
+     * Create a video sync update from the master player.
+     */
+    public static C2SMessageScreenCtrl videoSync(ScreenBlockEntity tes, BlockSide side, double playbackTime, boolean paused) {
+        C2SMessageScreenCtrl ret = base(tes, side);
+        ret.control = VideoSyncControl.masterUpdate(playbackTime, paused);
+        return ret;
+    }
+
+    /**
+     * Create a force sync request - triggers all viewers to re-sync to current master.
+     */
+    public static C2SMessageScreenCtrl forceSync(ScreenBlockEntity tes, BlockSide side) {
+        C2SMessageScreenCtrl ret = base(tes, side);
+        ret.control = new ForceSyncControl();
+        return ret;
+    }
+
     public C2SMessageScreenCtrl(FriendlyByteBuf buf) {
         super(buf);
 

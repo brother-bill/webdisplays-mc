@@ -59,16 +59,26 @@ public class KeyboardBlockLeft extends PeripheralBlock {
             if (te instanceof KeyboardBlockEntity)
                 return (KeyboardBlockEntity) te;
         }
-    
-        BlockPos relative = pos.relative(KeyboardBlockLeft.mapDirection(state.getValue(FACING).getOpposite()));
+
+        // Get the facing direction - use the correct property based on block type
+        Direction facing;
+        if (state.getBlock() instanceof KeyboardBlockLeft) {
+            facing = state.getValue(KeyboardBlockLeft.FACING);
+        } else if (state.getBlock() instanceof KeyboardBlockRight) {
+            facing = state.getValue(KeyboardBlockRight.FACING);
+        } else {
+            return null;
+        }
+
+        BlockPos relative = pos.relative(KeyboardBlockLeft.mapDirection(facing.getOpposite()));
         BlockState ns = world.getBlockState(relative);
-        
+
         if (ns.getBlock() instanceof PeripheralBlock) {
             BlockEntity te = world.getBlockEntity(relative); // TODO: check?
             if (te instanceof KeyboardBlockEntity)
                 return (KeyboardBlockEntity) te;
         }
-        
+
         return null;
     }
     

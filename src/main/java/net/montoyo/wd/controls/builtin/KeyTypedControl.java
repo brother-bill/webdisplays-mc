@@ -10,6 +10,7 @@ import net.montoyo.wd.controls.ScreenControl;
 import net.montoyo.wd.core.MissingPermissionException;
 import net.montoyo.wd.core.ScreenRights;
 import net.montoyo.wd.entity.ScreenBlockEntity;
+import net.montoyo.wd.utilities.Log;
 import net.montoyo.wd.utilities.data.BlockSide;
 
 import java.util.function.Function;
@@ -40,13 +41,21 @@ public class KeyTypedControl extends ScreenControl {
 	
 	@Override
 	public void handleServer(BlockPos pos, BlockSide side, ScreenBlockEntity tes, IPayloadContext ctx, Function<Integer, Boolean> permissionChecker) throws MissingPermissionException {
+		if (Log.DEBUG_KEYBOARD) {
+			Log.debug("[Keyboard] Server handleServer: pos=%s, side=%s, text=%s, player=%s",
+				pos, side, text, ctx.player().getName().getString());
+		}
 		checkPerms(ScreenRights.INTERACT, permissionChecker, (net.minecraft.server.level.ServerPlayer) ctx.player());
 		tes.type(side, text, soundPos, (net.minecraft.server.level.ServerPlayer) ctx.player());
 	}
-	
+
 	@Override
 	@OnlyIn(Dist.CLIENT)
 	public void handleClient(BlockPos pos, BlockSide side, ScreenBlockEntity tes, IPayloadContext ctx) {
+		if (Log.DEBUG_KEYBOARD) {
+			Log.debug("[Keyboard] Client handleClient (broadcast receive): pos=%s, side=%s, text=%s",
+				pos, side, text);
+		}
 		tes.type(side, text, soundPos);
 	}
 }

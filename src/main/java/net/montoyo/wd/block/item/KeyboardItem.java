@@ -8,6 +8,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.montoyo.wd.block.KeyboardBlockLeft;
+import net.montoyo.wd.block.KeyboardBlockRight;
 import net.montoyo.wd.registry.BlockRegistry;
 
 public class KeyboardItem extends BlockItem {
@@ -26,7 +27,7 @@ public class KeyboardItem extends BlockItem {
             Block kbRight = BlockRegistry.blockKbRight.get();
             BlockState rightState = kbRight.defaultBlockState();
 
-            rightState = rightState.setValue(KeyboardBlockLeft.FACING, facing);
+            rightState = rightState.setValue(KeyboardBlockRight.FACING, facing);
             if (!arg.getLevel().setBlock(
                     arg.getClickedPos().relative(d),
                     rightState,
@@ -37,7 +38,7 @@ public class KeyboardItem extends BlockItem {
             Block kbRight = BlockRegistry.blockKbRight.get();
             BlockState rightState = kbRight.defaultBlockState();
 
-            rightState = rightState.setValue(KeyboardBlockLeft.FACING, facing);
+            rightState = rightState.setValue(KeyboardBlockRight.FACING, facing);
             if (!arg.getLevel().setBlock(
                     arg.getClickedPos(),
                     rightState,

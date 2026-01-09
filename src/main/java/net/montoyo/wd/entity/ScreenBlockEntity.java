@@ -29,6 +29,7 @@ import net.montoyo.wd.WebDisplays;
 import net.montoyo.wd.block.ScreenBlock;
 import net.montoyo.wd.client.ClientProxy;
 import net.montoyo.wd.config.CommonConfig;
+import net.montoyo.wd.controls.ScreenControl;
 import net.montoyo.wd.controls.builtin.ClickControl;
 import net.montoyo.wd.core.DefaultUpgrade;
 import net.montoyo.wd.core.IUpgrade;
@@ -275,6 +276,8 @@ public class ScreenBlockEntity extends BlockEntity {
         weburl = WebDisplays.applyBlacklist(weburl);
         scr.url = weburl;
         scr.videoType = VideoType.getTypeFromURL(weburl);
+        // Reset video sync state when URL changes
+        scr.resetSyncState();
 
         if (level.isClientSide) {
             if (scr.browser != null)
@@ -707,6 +710,11 @@ public class ScreenBlockEntity extends BlockEntity {
             return;
         }
 
+        if (Log.DEBUG_KEYBOARD) {
+            Log.debug("[Keyboard] ScreenBlockEntity.type(): side=%s, isClientSide=%s, sender=%s, textLen=%d",
+                side, level.isClientSide, sender != null ? sender.getName().getString() : "null", text.length());
+        }
+
         if (level.isClientSide) {
             if (scr.browser instanceof MCEFBrowser mcefBrowser) {
                 try {
@@ -750,7 +758,8 @@ public class ScreenBlockEntity extends BlockEntity {
                 }
             }
         } else {
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.type(this, side, text));
+            // Exclude sender from broadcast to prevent double input - sender already processed input locally
+            WDNetworkRegistry.sendToNearExcept(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.type(this, side, text), sender);
 
             if (soundPos != null)
                 playSoundAt(WebDisplays.INSTANCE.soundTyping, soundPos, 0.25f, 1.f);
@@ -1070,6 +1079,36 @@ public class ScreenBlockEntity extends BlockEntity {
             WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.autoVolume(this, side, av));
             setChanged();
         }
+    }
+
+    public void setSyncEnabled(BlockSide side, boolean enabled) {
+        ScreenData scr = getScreen(side);
+        if (scr == null) {
+            Log.error("Trying to toggle sync enabled on invalid screen (side %s)", side.toString());
+            return;
+        }
+
+        scr.userSyncEnabled = enabled;
+        scr.updateSyncEnabled(); // Update the computed syncEnabled flag
+
+        if (level.isClientSide)
+            WebDisplays.PROXY.screenUpdateSyncEnabledInGui(new Vector3i(getBlockPos()), side, enabled);
+        else {
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.syncEnabled(this, side, enabled));
+            setChanged();
+        }
+    }
+
+    /**
+     * Broadcast a ScreenControl message to all players near this screen.
+     * Used for video sync broadcasts.
+     */
+    public void broadcastToWatchers(BlockSide side, ScreenControl control) {
+        if (level.isClientSide) {
+            Log.error("broadcastToWatchers called on client side");
+            return;
+        }
+        WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.fromControl(this, side, control));
     }
 
     public void deactivate() {

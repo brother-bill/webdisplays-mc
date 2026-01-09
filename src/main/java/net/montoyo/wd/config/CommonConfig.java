@@ -53,6 +53,36 @@ public class CommonConfig {
 		public static String homepage = "mod://webdisplays/main.html";
 	}
 
+	@Comment("Options for video playback synchronization across players")
+	@CFGSegment("video_sync")
+	public static class VideoSync {
+		@Name("enabled")
+		@Comment("Enable video playback synchronization across all players viewing the same screen")
+		@Translation("config.webdisplays.sync_enabled")
+		@Default(valueBoolean = true)
+		public static boolean enabled = true;
+
+		@Name("sync_whitelist")
+		@Comment("List of domains where video sync is enabled. Use * to enable for all sites. Examples: youtube.com, hianime.to")
+		@Translation("config.webdisplays.sync_whitelist")
+		@Default(valueStr = "youtube.com,youtu.be,hianime.to,9animetv.to,9anime.to,aniwave.to")
+		public static String[] syncWhitelist = new String[]{"youtube.com", "youtu.be", "hianime.to", "9animetv.to", "9anime.to", "aniwave.to"};
+
+		@Name("sync_tolerance_seconds")
+		@Comment("Time difference (in seconds) before forcing a seek to sync. Lower = stricter sync but more seeking")
+		@Translation("config.webdisplays.sync_tolerance")
+		@IntRange(minV = 1, maxV = 30)
+		@Default(valueI = 3)
+		public static int syncToleranceSeconds = 3;
+
+		@Name("sync_interval_ms")
+		@Comment("How often (in milliseconds) the master player broadcasts their playback time")
+		@Translation("config.webdisplays.sync_interval")
+		@IntRange(minV = 500, maxV = 10000)
+		@Default(valueI = 2000)
+		public static int syncIntervalMs = 2000;
+	}
+
 	@Comment("Options for the in world screen blocks")
 	@CFGSegment("screen_options")
 	public static class Screen {

@@ -77,6 +77,7 @@ import net.montoyo.wd.registry.ItemRegistry;
 import net.montoyo.wd.registry.TileRegistry;
 import net.montoyo.wd.utilities.Log;
 import net.montoyo.wd.utilities.Multiblock;
+import net.montoyo.wd.utilities.VideoType;
 import net.montoyo.wd.utilities.browser.WDBrowser;
 import net.montoyo.wd.utilities.browser.handlers.DisplayHandler;
 import net.montoyo.wd.utilities.browser.handlers.WDRouter;
@@ -85,11 +86,17 @@ import net.montoyo.wd.utilities.data.Rotation;
 import net.montoyo.wd.utilities.math.Vector2i;
 import net.montoyo.wd.utilities.math.Vector3i;
 import net.montoyo.wd.utilities.serialization.NameUUIDPair;
+import net.montoyo.wd.config.CommonConfig;
+import net.montoyo.wd.net.WDNetworkRegistry;
+import net.montoyo.wd.net.server_bound.C2SMessageScreenCtrl;
 import org.cef.browser.CefBrowser;
+import org.cef.browser.CefFrame;
 import org.cef.browser.CefMessageRouter;
 import org.cef.misc.CefCursorType;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -376,7 +383,15 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 				gsc.updateAutoVolume(av);
 		}
 	}
-	
+
+	@Override
+	public void screenUpdateSyncEnabledInGui(Vector3i pos, BlockSide side, boolean enabled) {
+		if (mc.screen != null && mc.screen instanceof GuiScreenConfig gsc) {
+			if (gsc.isForBlock(pos.toBlock(), side))
+				gsc.updateSyncEnabled(enabled);
+		}
+	}
+
 	@Override
 	public void displaySetPadURLGui(ItemStack is, String padURL) {
 		mc.setScreen(new GuiSetURL2(is, padURL));
@@ -614,8 +629,291 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 					tes.activate();
 			}
 		}
+
+		// Video sync tick - check and sync video playback
+		if (CommonConfig.VideoSync.enabled) {
+			tickVideoSync();
+		}
 	}
-	
+
+	/**
+	 * Tick video sync for all tracked screens.
+	 *
+	 * APPROACH WITH RETRY FOR ADS:
+	 * - Sync happens when a client first connects to a screen
+	 * - Master reports their time once when they first load
+	 * - Followers attempt to seek to master's time with RETRIES
+	 * - Retries are needed because YouTube ads block seeking to main video
+	 * - After successful sync or max attempts, stop syncing
+	 */
+	private void tickVideoSync() {
+		if (mc.player == null || screenTracking.isEmpty()) {
+			return;
+		}
+
+		UUID playerUUID = mc.player.getGameProfile().getId();
+		long now = System.currentTimeMillis();
+
+		for (ScreenBlockEntity tes : screenTracking) {
+			if (!tes.isLoaded()) continue;
+
+			for (int i = 0; i < tes.screenCount(); i++) {
+				ScreenData scr = tes.getScreen(i);
+				if (scr == null || scr.browser == null) continue;
+
+				// Skip if initial sync is already done
+				if (scr.initialSyncDone) continue;
+
+				// Update sync enabled state based on current URL
+				scr.updateSyncEnabled();
+				if (!scr.syncEnabled) continue;
+
+				VideoType videoType = VideoType.getTypeFromURL(scr.url);
+				if (videoType == null || !videoType.supportsSync()) continue;
+
+				// If we haven't requested sync state yet, do it now
+				if (!scr.syncStateRequested) {
+					scr.syncStateRequested = true;
+
+					if (Log.DEBUG_VIDEO_SYNC) {
+						Log.info("[VideoSync] Requesting sync state for screen at %s, side %s",
+							tes.getBlockPos(), scr.side);
+					}
+
+					// Query our current playback state and send to server
+					// Server will either make us master or respond with master's time
+					querySyncStateAndSend(tes, scr, videoType);
+					continue;
+				}
+
+				// Check if we've received sync state from server
+				if (scr.initialSyncReceivedTime > 0 && scr.syncMasterUUID != null) {
+					boolean isMaster = scr.syncMasterUUID.equals(playerUUID);
+
+					if (isMaster) {
+						// We're the master, no need to seek
+						scr.initialSyncDone = true;
+						if (Log.DEBUG_VIDEO_SYNC) {
+							Log.info("[VideoSync] We are the master, sync complete for screen at %s", tes.getBlockPos());
+						}
+						continue;
+					}
+
+					// Check if we've exceeded max attempts
+					if (scr.syncAttemptCount >= ScreenData.MAX_SYNC_ATTEMPTS) {
+						scr.initialSyncDone = true;
+						Log.warning("[VideoSync] Max sync attempts reached for screen at %s, giving up", tes.getBlockPos());
+						continue;
+					}
+
+					// Check if enough time has passed since last attempt (wait for ads)
+					if (now - scr.lastSyncAttemptTime < ScreenData.SYNC_RETRY_DELAY_MS) {
+						continue; // Wait before retrying
+					}
+
+					// Attempt to sync
+					scr.syncAttemptCount++;
+					scr.lastSyncAttemptTime = now;
+
+					// Calculate target time (accounting for elapsed time since we received the data)
+					long elapsedSinceReceived = now - scr.initialSyncReceivedTime;
+					double targetTime = scr.syncPlaybackTime + (scr.syncPaused ? 0 : elapsedSinceReceived / 1000.0);
+
+					if (Log.DEBUG_VIDEO_SYNC) {
+						Log.info("[VideoSync] Sync attempt %d/%d: seeking to %.2f seconds (screen: %s)",
+							scr.syncAttemptCount, ScreenData.MAX_SYNC_ATTEMPTS, targetTime, tes.getBlockPos());
+					}
+
+					CefFrame frame = scr.browser.getMainFrame();
+					if (frame != null) {
+						// Execute JS that checks if video is ready (not in ad) and seeks if so
+						// For YouTube: check if player state is 1 (playing) or 2 (paused), not -1 (unstarted) or ad states
+						String syncJs = buildSyncJS(videoType, targetTime, tes.getBlockPos().toString(), scr.syncAttemptCount);
+						frame.executeJavaScript(syncJs, scr.url, 0);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Build JavaScript that attempts to sync video, checking for ads first.
+	 * Reports result via cefQuery callback.
+	 */
+	private String buildSyncJS(VideoType videoType, double targetTime, String screenId, int attemptNum) {
+		if (videoType == VideoType.YOUTUBE || videoType == VideoType.YOUTUBE_EMBED) {
+			// YouTube-specific: check player state to detect if ads are playing
+			// States: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
+			// During ads, there's often no movie_player or different state
+			return String.format(
+				"(function() {" +
+				"  try {" +
+				"    var p = document.getElementById('movie_player') || document.getElementsByClassName('html5-video-player')[0];" +
+				"    if (!p || typeof p.getPlayerState !== 'function') {" +
+				"      console.log('[WD Sync] Player not ready yet');" +
+				"      if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":false,\"reason\":\"no_player\",\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"      return;" +
+				"    }" +
+				"    var state = p.getPlayerState();" +
+				"    var adPlaying = document.querySelector('.ad-showing') !== null || document.querySelector('.ytp-ad-player-overlay') !== null;" +
+				"    console.log('[WD Sync] Player state: ' + state + ', ad playing: ' + adPlaying);" +
+				"    if (adPlaying) {" +
+				"      console.log('[WD Sync] Ad is playing, skipping sync');" +
+				"      if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":false,\"reason\":\"ad_playing\",\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"      return;" +
+				"    }" +
+				"    if (state === -1 || state === 5) {" +
+				"      console.log('[WD Sync] Video not started yet');" +
+				"      if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":false,\"reason\":\"not_started\",\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"      return;" +
+				"    }" +
+				"    p.seekTo(%f, true);" +
+				"    console.log('[WD Sync] Seeked to ' + %f);" +
+				"    if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":true,\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"  } catch(e) {" +
+				"    console.log('[WD Sync] Error: ' + e);" +
+				"    if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":false,\"reason\":\"error\",\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"  }" +
+				"})();",
+				screenId, attemptNum,  // no_player
+				screenId, attemptNum,  // ad_playing
+				screenId, attemptNum,  // not_started
+				targetTime, targetTime, screenId, attemptNum,  // success
+				screenId, attemptNum   // error
+			);
+		} else {
+			// Generic HTML5 video
+			return String.format(
+				"(function() {" +
+				"  try {" +
+				"    var v = document.querySelector('video');" +
+				"    if (!v) {" +
+				"      var iframes = document.querySelectorAll('iframe');" +
+				"      for (var i = 0; i < iframes.length; i++) {" +
+				"        try { v = iframes[i].contentDocument.querySelector('video'); if (v) break; } catch(e) {}" +
+				"      }" +
+				"    }" +
+				"    if (!v) {" +
+				"      console.log('[WD Sync] No video element found');" +
+				"      if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":false,\"reason\":\"no_video\",\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"      return;" +
+				"    }" +
+				"    if (v.readyState < 2) {" + // HAVE_CURRENT_DATA
+				"      console.log('[WD Sync] Video not ready yet, readyState: ' + v.readyState);" +
+				"      if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":false,\"reason\":\"not_ready\",\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"      return;" +
+				"    }" +
+				"    v.currentTime = %f;" +
+				"    console.log('[WD Sync] Seeked to ' + %f);" +
+				"    if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":true,\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"  } catch(e) {" +
+				"    console.log('[WD Sync] Error: ' + e);" +
+				"    if (window.cefQuery) window.cefQuery({request: 'wd_sync_result:{\"success\":false,\"reason\":\"error\",\"screen\":\"%s\",\"attempt\":%d}', persistent: false});" +
+				"  }" +
+				"})();",
+				screenId, attemptNum,  // no_video
+				screenId, attemptNum,  // not_ready
+				targetTime, targetTime, screenId, attemptNum,  // success
+				screenId, attemptNum   // error
+			);
+		}
+	}
+
+	/**
+	 * Query the video's current state and send to server.
+	 * Called once per screen when first loading.
+	 */
+	private void querySyncStateAndSend(ScreenBlockEntity tes, ScreenData scr, VideoType videoType) {
+		if (scr.browser == null) return;
+
+		String js = videoType.getSyncStateJS();
+		CefFrame frame = scr.browser.getMainFrame();
+		if (frame == null) return;
+
+		if (Log.DEBUG_VIDEO_SYNC) {
+			Log.info("[VideoSync] Querying browser state to send sync update");
+		}
+
+		frame.executeJavaScript(
+			"(function() {" +
+			"  var result = " + js + ";" +
+			"  if (result && window.cefQuery) {" +
+			"    window.cefQuery({request: 'wd_sync_master:' + result, persistent: false});" +
+			"  } else if (window.cefQuery) {" +
+			"    // Video not ready yet, report time 0" +
+			"    window.cefQuery({request: 'wd_sync_master:{\"time\":0,\"paused\":true}', persistent: false});" +
+			"  }" +
+			"})();",
+			scr.url, 0
+		);
+	}
+
+	/**
+	 * Handle a sync state report from the master player's JavaScript.
+	 * Called via cefQuery callback from the browser.
+	 */
+	public void handleSyncMasterReport(CefBrowser browser, String jsonData) {
+		try {
+			JsonObject state = JsonParser.parseString(jsonData).getAsJsonObject();
+			double time = state.get("time").getAsDouble();
+			boolean paused = state.get("paused").getAsBoolean();
+
+			if (Log.DEBUG_VIDEO_SYNC) {
+				Log.info("[VideoSync] Browser reported state: time=%.2f, paused=%s", time, paused);
+			}
+
+			// Find which screen this browser belongs to
+			ScreenSidePair pair = new ScreenSidePair();
+			if (findScreenFromBrowser(browser, pair)) {
+				if (Log.DEBUG_VIDEO_SYNC) {
+					Log.info("[VideoSync] Sending sync update to server for screen at %s, side %s",
+						pair.tes.getBlockPos(), pair.side);
+				}
+				// Send the sync update to server
+				WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.videoSync(pair.tes, pair.side, time, paused));
+			}
+		} catch (Exception e) {
+			Log.warning("[VideoSync] Failed to parse sync state: %s", e.getMessage());
+		}
+	}
+
+	/**
+	 * Handle a sync result report from JavaScript (success/failure of seek attempt).
+	 * Called via cefQuery callback from the browser.
+	 */
+	public void handleSyncResult(CefBrowser browser, String jsonData) {
+		try {
+			JsonObject result = JsonParser.parseString(jsonData).getAsJsonObject();
+			boolean success = result.get("success").getAsBoolean();
+			String reason = result.has("reason") ? result.get("reason").getAsString() : "";
+			int attempt = result.has("attempt") ? result.get("attempt").getAsInt() : 0;
+
+			// Find which screen this browser belongs to
+			ScreenSidePair pair = new ScreenSidePair();
+			if (findScreenFromBrowser(browser, pair)) {
+				ScreenData scr = pair.tes.getScreen(pair.side);
+				if (scr == null) return;
+
+				if (success) {
+					// Sync successful - mark as done
+					scr.initialSyncDone = true;
+					if (Log.DEBUG_VIDEO_SYNC) {
+						Log.info("[VideoSync] Sync SUCCESS on attempt %d for screen at %s",
+							attempt, pair.tes.getBlockPos());
+					}
+				} else {
+					// Sync failed - will retry on next tick (if attempts remain)
+					if (Log.DEBUG_VIDEO_SYNC) {
+						Log.info("[VideoSync] Sync FAILED on attempt %d for screen at %s, reason: %s",
+							attempt, pair.tes.getBlockPos(), reason);
+					}
+				}
+			}
+		} catch (Exception e) {
+			Log.warning("[VideoSync] Failed to parse sync result: %s", e.getMessage());
+		}
+	}
+
 	@SubscribeEvent
 	public void onTick(ClientTickEvent.Post ev) {
 		

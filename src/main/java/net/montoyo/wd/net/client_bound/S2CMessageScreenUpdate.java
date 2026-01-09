@@ -95,6 +95,12 @@ public class S2CMessageScreenUpdate extends Packet {
         return screenUpdate;
     }
 
+    public static S2CMessageScreenUpdate syncEnabled(ScreenBlockEntity screen, BlockSide side, boolean enabled) {
+        S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
+        screenUpdate.control = new SyncEnabledControl(enabled);
+        return screenUpdate;
+    }
+
     public static S2CMessageScreenUpdate owner(ScreenBlockEntity screen, BlockSide side, NameUUIDPair owner) {
         S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
         screenUpdate.control = new OwnerControl(owner);
@@ -104,6 +110,16 @@ public class S2CMessageScreenUpdate extends Packet {
     public static S2CMessageScreenUpdate turnOff(BlockPos blockPos, BlockSide side) {
         S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(blockPos, side);
         screenUpdate.control = TurnOffControl.INSTANCE;
+        return screenUpdate;
+    }
+
+    /**
+     * Create a screen update from any ScreenControl.
+     * Used for generic control broadcasting like video sync.
+     */
+    public static S2CMessageScreenUpdate fromControl(ScreenBlockEntity screen, BlockSide side, ScreenControl control) {
+        S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
+        screenUpdate.control = control;
         return screenUpdate;
     }
 

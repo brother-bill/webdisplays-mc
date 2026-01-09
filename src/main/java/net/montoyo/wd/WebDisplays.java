@@ -22,6 +22,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.client.event.ClientChatEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.ServerChatEvent;
@@ -185,7 +186,8 @@ public class WebDisplays {
             if (ev.getLevel().isClientSide() || level.dimension() != Level.OVERWORLD)
                 return;
 
-            File worldDir = Objects.requireNonNull(ev.getLevel().getServer()).getServerDirectory().toFile();
+            MinecraftServer server = Objects.requireNonNull(ev.getLevel().getServer());
+            File worldDir = server.getWorldPath(LevelResource.ROOT).toFile();
             File f = new File(worldDir, "wd_next.txt");
 
             if (f.exists()) {
@@ -236,7 +238,9 @@ public class WebDisplays {
         if(ev.getLevel() instanceof Level level) {
             if (ev.getLevel().isClientSide() || level.dimension() != Level.OVERWORLD)
                 return;
-            File f = new File(Objects.requireNonNull(ev.getLevel().getServer()).getServerDirectory().toFile(), "wd_next.txt");
+            MinecraftServer server = Objects.requireNonNull(ev.getLevel().getServer());
+            File worldDir = server.getWorldPath(LevelResource.ROOT).toFile();
+            File f = new File(worldDir, "wd_next.txt");
 
             try {
                 BufferedWriter bw = new BufferedWriter(new FileWriter(f));

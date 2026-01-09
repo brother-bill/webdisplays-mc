@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
+import net.montoyo.wd.config.CommonConfig;
 
 public class GuiScreenConfig extends WDScreen {
 
@@ -121,6 +122,15 @@ public class GuiScreenConfig extends WDScreen {
     @FillControl
     private CheckBox cbAutoVolume;
 
+    @FillControl
+    private CheckBox cbSyncEnabled;
+
+    @FillControl
+    private Button btnSyncVideo;
+
+    @FillControl
+    private Label lblSyncMaster;
+
     private CheckBox[] friendBoxes;
     private CheckBox[] otherBoxes;
 
@@ -164,6 +174,9 @@ public class GuiScreenConfig extends WDScreen {
             //Hopefully upgrades have been synchronized...
             ugUpgrades.setUpgrades(scr.upgrades);
             cbAutoVolume.setChecked(scr.autoVolume);
+
+            // Update video sync UI
+            updateSyncUI(scr);
         }
 
         if(owner == null)
@@ -226,6 +239,10 @@ public class GuiScreenConfig extends WDScreen {
         else if(ev.getSource() == btnChangeRot) {
             Rotation[] rots = Rotation.values();
             WDNetworkRegistry.sendToServer(new C2SMessageScreenCtrl(tes, side, rots[(rotation.ordinal() + 1) % rots.length]));
+        } else if(ev.getSource() == btnSyncVideo) {
+            // Request force sync - server will broadcast current master's time to all viewers
+            WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.forceSync(tes, side));
+            Log.info("[VideoSync] Force sync requested via UI");
         }
     }
 
@@ -319,6 +336,7 @@ public class GuiScreenConfig extends WDScreen {
                 cbLockRatio.setChecked(false);
             }
         } else if(ev.getSource() == cbAutoVolume) WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.autoVol(tes, side, ev.isChecked()));
+        else if(ev.getSource() == cbSyncEnabled) WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.syncEnabled(tes, side, ev.isChecked()));
     }
 
     @GuiSubscribe
@@ -490,6 +508,10 @@ public class GuiScreenConfig extends WDScreen {
         cbAutoVolume.setChecked(av);
     }
 
+    public void updateSyncEnabled(boolean enabled) {
+        cbSyncEnabled.setChecked(enabled);
+    }
+
     @Override
     public boolean isForBlock(BlockPos bp, BlockSide side) {
         return bp.equals(tes.getBlockPos()) && side == this.side;
@@ -516,8 +538,64 @@ public class GuiScreenConfig extends WDScreen {
             Minecraft.getInstance().setScreen(null);
             return true;
         }
-        
+
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
+    /**
+     * Update the video sync UI elements based on current screen state.
+     */
+    private void updateSyncUI(ScreenData scr) {
+        // Check if video sync is enabled for this URL
+        boolean syncEnabled = CommonConfig.VideoSync.enabled && scr != null && VideoType.isSyncEnabledForURL(scr.url);
+
+        // Initialize checkbox from screen state
+        if (scr != null) {
+            cbSyncEnabled.setChecked(scr.userSyncEnabled);
+        }
+
+        // Disable button if sync not enabled
+        btnSyncVideo.setDisabled(!syncEnabled);
+
+        // Update master label
+        if (scr != null && scr.syncMasterUUID != null) {
+            // Try to get master name from server or show UUID
+            String masterName = getMasterDisplayName(scr.syncMasterUUID);
+            lblSyncMaster.setLabel(I18n.get("webdisplays.gui.screencfg.syncmaster", masterName));
+        } else {
+            lblSyncMaster.setLabel(I18n.get("webdisplays.gui.screencfg.syncmaster.none"));
+        }
+    }
+
+    /**
+     * Get a display name for the sync master UUID.
+     */
+    private String getMasterDisplayName(UUID masterUUID) {
+        // Check if it's the local player
+        if (minecraft.player != null && minecraft.player.getGameProfile().getId().equals(masterUUID)) {
+            return minecraft.player.getGameProfile().getName() + " (You)";
+        }
+        // Check if it's the owner
+        if (owner != null && owner.uuid.equals(masterUUID)) {
+            return owner.name;
+        }
+        // Check if it's a friend
+        for (NameUUIDPair friend : friends) {
+            if (friend.uuid.equals(masterUUID)) {
+                return friend.name;
+            }
+        }
+        // Return shortened UUID as fallback
+        return masterUUID.toString().substring(0, 8) + "...";
+    }
+
+    /**
+     * Called to update sync state display (can be called from network updates).
+     */
+    public void updateSyncState() {
+        ScreenData scr = tes.getScreen(side);
+        if (scr != null) {
+            updateSyncUI(scr);
+        }
+    }
 }

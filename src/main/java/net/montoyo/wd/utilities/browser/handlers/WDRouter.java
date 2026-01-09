@@ -2,6 +2,8 @@ package net.montoyo.wd.utilities.browser.handlers;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import net.montoyo.wd.WebDisplays;
+import net.montoyo.wd.client.ClientProxy;
 import net.montoyo.wd.utilities.browser.WDBrowser;
 import net.montoyo.wd.utilities.browser.handlers.js.JSQueryHandler;
 import org.cef.browser.CefBrowser;
@@ -41,6 +43,26 @@ public class WDRouter extends CefMessageRouterHandlerAdapter {
 
     @Override
     public boolean onQuery(CefBrowser browser, CefFrame frame, long queryId, String request, boolean persistent, CefQueryCallback callback) {
+        // Handle video sync master reports
+        if (request.startsWith("wd_sync_master:")) {
+            String jsonData = request.substring("wd_sync_master:".length());
+            if (WebDisplays.PROXY instanceof ClientProxy clientProxy) {
+                clientProxy.handleSyncMasterReport(browser, jsonData);
+            }
+            callback.success("");
+            return true;
+        }
+
+        // Handle video sync result reports (success/failure of sync attempts)
+        if (request.startsWith("wd_sync_result:")) {
+            String jsonData = request.substring("wd_sync_result:".length());
+            if (WebDisplays.PROXY instanceof ClientProxy clientProxy) {
+                clientProxy.handleSyncResult(browser, jsonData);
+            }
+            callback.success("");
+            return true;
+        }
+
         if (request.startsWith("WebDisplays_")) {
             request = request.substring("Webdisplays_".length());
 

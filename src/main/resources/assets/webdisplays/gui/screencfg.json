@@ -208,6 +208,37 @@
       "y": 150,
       "label": "$webdisplays.gui.screencfg.autovol",
       "tooltip": "$webdisplays.gui.screencfg.avwarning"
+    },
+    {
+      "type": "Label",
+      "x": 258,
+      "y": 168,
+      "label": "$webdisplays.gui.screencfg.videosync"
+    },
+    {
+      "type": "CheckBox",
+      "name": "cbSyncEnabled",
+      "x": 257,
+      "y": 180,
+      "label": "$webdisplays.gui.screencfg.syncenabled",
+      "tooltip": "$webdisplays.gui.screencfg.syncenabled.tooltip"
+    },
+    {
+      "type": "Button",
+      "name": "btnSyncVideo",
+      "x": 260,
+      "y": 196,
+      "width": 84,
+      "label": "$webdisplays.gui.screencfg.syncnow",
+      "tooltip": "$webdisplays.gui.screencfg.syncnow.tooltip"
+    },
+    {
+      "type": "Label",
+      "name": "lblSyncMaster",
+      "x": 258,
+      "y": 216,
+      "label": "",
+      "shadowed": false
     }
   ],
   "center": true

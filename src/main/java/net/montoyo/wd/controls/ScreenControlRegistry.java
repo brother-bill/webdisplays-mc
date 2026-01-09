@@ -64,6 +64,10 @@ public class ScreenControlRegistry {
         register(ClickControl.id, new ScreenControlType<>(ClickControl.class, ClickControl::new));
         register(OwnerControl.id, new ScreenControlType<>(OwnerControl.class, OwnerControl::new));
         register(TurnOffControl.id, new ScreenControlType<>(TurnOffControl.class, (buf) -> TurnOffControl.INSTANCE));
+        register(VideoSyncControl.id, new ScreenControlType<>(VideoSyncControl.class, VideoSyncControl::new));
+        register(ForceSyncControl.id, new ScreenControlType<>(ForceSyncControl.class, ForceSyncControl::new));
+        register(ForceSyncBroadcast.id, new ScreenControlType<>(ForceSyncBroadcast.class, ForceSyncBroadcast::new));
+        register(SyncEnabledControl.id, new ScreenControlType<>(SyncEnabledControl.class, SyncEnabledControl::new));
     }
 
     public static ScreenControl parse(FriendlyByteBuf buf) {

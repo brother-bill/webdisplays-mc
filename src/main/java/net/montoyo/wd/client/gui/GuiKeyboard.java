@@ -194,6 +194,9 @@ public class GuiKeyboard extends WDScreen {
     }
 
     void addKey(TypeData data) {
+        if (Log.DEBUG_KEYBOARD) {
+            Log.debug("[Keyboard] Client addKey: action=%s, keyCode=%d", data.getAction(), data.getKeyCode());
+        }
         tes.type(side, "[" + WebDisplays.GSON.toJson(data) + "]", kbPos);
 
         evStack.add(data);

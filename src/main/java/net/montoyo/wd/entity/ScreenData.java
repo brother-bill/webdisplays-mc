@@ -50,6 +50,36 @@ public class ScreenData {
 
     public int mouseType;
 
+    // ===== VIDEO SYNC FIELDS =====
+    // Per-screen user preference to enable/disable sync (saved with screen)
+    public boolean userSyncEnabled = false;
+    // Master UUID is set server-side when first player loads a sync-enabled URL
+    public UUID syncMasterUUID = null;
+    // Last known playback time from master (server-side state)
+    public double syncPlaybackTime = 0.0;
+    // Is the video paused? (server-side state)
+    public boolean syncPaused = false;
+    // When the sync state was last updated (for interpolation)
+    public long syncUpdateTimestamp = 0;
+    // Is sync enabled for current URL
+    public boolean syncEnabled = false;
+    // Last time this client sent a sync update (client-side, to throttle)
+    public long lastSyncSentTime = 0;
+    // CLIENT-SIDE: Has this client completed initial sync for this screen?
+    public boolean initialSyncDone = false;
+    // CLIENT-SIDE: Have we requested sync state from server?
+    public boolean syncStateRequested = false;
+    // CLIENT-SIDE: Time when we received initial sync data (for one-time seek)
+    public long initialSyncReceivedTime = 0;
+    // CLIENT-SIDE: Number of sync attempts made (for retry logic)
+    public int syncAttemptCount = 0;
+    // CLIENT-SIDE: Time of last sync attempt (for spacing out retries)
+    public long lastSyncAttemptTime = 0;
+    // CLIENT-SIDE: Max sync attempts before giving up
+    public static final int MAX_SYNC_ATTEMPTS = 10;
+    // CLIENT-SIDE: Delay between sync attempts in ms (allows ads to finish)
+    public static final long SYNC_RETRY_DELAY_MS = 3000;
+
     public static ScreenData deserialize(CompoundTag tag, HolderLookup.Provider registries) {
         ScreenData ret = new ScreenData();
         ret.side = BlockSide.values()[tag.getByte("Side")];
@@ -96,6 +126,9 @@ public class ScreenData {
         if (tag.contains("AutoVolume"))
             ret.autoVolume = tag.getBoolean("AutoVolume");
 
+        if (tag.contains("SyncEnabled"))
+            ret.userSyncEnabled = tag.getBoolean("SyncEnabled");
+
         return ret;
     }
 
@@ -135,6 +168,7 @@ public class ScreenData {
 
         tag.put("Upgrades", list);
         tag.putBoolean("AutoVolume", autoVolume);
+        tag.putBoolean("SyncEnabled", userSyncEnabled);
         return tag;
     }
 
@@ -208,5 +242,79 @@ public class ScreenData {
             doTurnOnAnim = doAnim;
             turnOnTime = System.currentTimeMillis();
         }
+    }
+
+    // ===== VIDEO SYNC METHODS =====
+
+    /**
+     * Check if video sync is enabled for the current URL.
+     * Updates the syncEnabled flag based on config, URL whitelist, AND user preference.
+     */
+    public void updateSyncEnabled() {
+        // Sync is enabled if: global config enabled AND URL is whitelisted AND user hasn't disabled it for this screen
+        syncEnabled = userSyncEnabled && VideoType.isSyncEnabledForURL(url);
+    }
+
+    /**
+     * Called when URL changes to reset sync state.
+     */
+    public void resetSyncState() {
+        syncMasterUUID = null;
+        syncPlaybackTime = 0.0;
+        syncPaused = false;
+        syncUpdateTimestamp = 0;
+        lastSyncSentTime = 0;
+        initialSyncDone = false;
+        syncStateRequested = false;
+        initialSyncReceivedTime = 0;
+        syncAttemptCount = 0;
+        lastSyncAttemptTime = 0;
+        updateSyncEnabled();
+    }
+
+    /**
+     * Update sync state from master's broadcast.
+     */
+    public void updateSyncState(UUID masterUUID, double playbackTime, boolean paused) {
+        this.syncMasterUUID = masterUUID;
+        this.syncPlaybackTime = playbackTime;
+        this.syncPaused = paused;
+        this.syncUpdateTimestamp = System.currentTimeMillis();
+    }
+
+    /**
+     * Get the interpolated playback time, accounting for time elapsed since last sync.
+     */
+    public double getInterpolatedPlaybackTime() {
+        if (syncPaused || syncUpdateTimestamp == 0) {
+            return syncPlaybackTime;
+        }
+        long elapsed = System.currentTimeMillis() - syncUpdateTimestamp;
+        return syncPlaybackTime + (elapsed / 1000.0);
+    }
+
+    /**
+     * Check if this client is the sync master for this screen.
+     * @param playerUUID The local player's UUID
+     */
+    public boolean isSyncMaster(UUID playerUUID) {
+        return syncMasterUUID != null && syncMasterUUID.equals(playerUUID);
+    }
+
+    /**
+     * Check if client should seek to sync position (if difference is too large).
+     * @param currentTime The current playback time from the local browser
+     * @return The time to seek to, or -1 if no seek needed
+     */
+    public double shouldSyncSeek(double currentTime) {
+        if (!syncEnabled || syncMasterUUID == null) {
+            return -1;
+        }
+        double targetTime = getInterpolatedPlaybackTime();
+        double tolerance = CommonConfig.VideoSync.syncToleranceSeconds;
+        if (Math.abs(currentTime - targetTime) > tolerance) {
+            return targetTime;
+        }
+        return -1;
     }
 }

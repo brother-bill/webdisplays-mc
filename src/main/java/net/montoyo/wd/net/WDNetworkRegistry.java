@@ -118,9 +118,16 @@ public class WDNetworkRegistry {
      * Send a packet to all players near a position
      */
     public static void sendToNear(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, double radius, CustomPacketPayload payload) {
+        sendToNearExcept(level, pos, radius, payload, null);
+    }
+
+    /**
+     * Send a packet to all players near a position, except for a specific player
+     */
+    public static void sendToNearExcept(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos, double radius, CustomPacketPayload payload, @javax.annotation.Nullable ServerPlayer except) {
         if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
             for (ServerPlayer player : serverLevel.players()) {
-                if (player.blockPosition().distSqr(pos) <= radius * radius) {
+                if (player != except && player.blockPosition().distSqr(pos) <= radius * radius) {
                     sendToPlayer(player, payload);
                 }
             }

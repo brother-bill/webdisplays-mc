@@ -85,6 +85,9 @@ public class SharedProxy {
     public void screenUpdateAutoVolumeInGui(Vector3i pos, BlockSide side, boolean av) {
     }
 
+    public void screenUpdateSyncEnabledInGui(Vector3i pos, BlockSide side, boolean enabled) {
+    }
+
     public void displaySetPadURLGui(ItemStack is, String padURL) {
         Log.error("Called SharedProxy.displaySetPadURLGui() on server side...");
     }
