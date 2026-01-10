@@ -13,8 +13,7 @@
     }
   },
   "result": {
-    "item": "webdisplays:craftcomp_backlight",
-    "data": 6,
+    "id": "webdisplays:craftcomp_backlight",
     "count": 1
   }
 }

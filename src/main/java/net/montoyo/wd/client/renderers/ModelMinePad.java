@@ -29,13 +29,15 @@ public final class ModelMinePad {
 
 		Matrix4f positionMatrix = stack.last().pose();
 
+		// Black background quad - rendered behind browser to prevent Z-fighting
+		float bgZ = -0.002f;
 		RenderSystem.setShader(GameRenderer::getPositionColorShader);
 		RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 		BufferBuilder vb = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-		vb.addVertex(positionMatrix, (float) x1, (float) y1, 0.0f).setColor(0, 0, 0, 255);
-		vb.addVertex(positionMatrix, (float) x2, (float) y1, 0.0f).setColor(0, 0, 0, 255);
-		vb.addVertex(positionMatrix, (float) x2, (float) y2, 0.0f).setColor(0, 0, 0, 255);
-		vb.addVertex(positionMatrix, (float) x1, (float) y2, 0.0f).setColor(0, 0, 0, 255);
+		vb.addVertex(positionMatrix, (float) x1, (float) y1, bgZ).setColor(0, 0, 0, 255);
+		vb.addVertex(positionMatrix, (float) x2, (float) y1, bgZ).setColor(0, 0, 0, 255);
+		vb.addVertex(positionMatrix, (float) x2, (float) y2, bgZ).setColor(0, 0, 0, 255);
+		vb.addVertex(positionMatrix, (float) x1, (float) y2, bgZ).setColor(0, 0, 0, 255);
 		BufferUploader.drawWithShader(vb.buildOrThrow());
 
 		int width = 32;
@@ -44,7 +46,7 @@ public final class ModelMinePad {
 		float padding = 1f / 23;
 		float padding1 = 1f / 21;
 
-		float z = 0;
+		float z = -0.001f; // Push bezel back to prevent Z-fighting with browser view
 
 		VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutout(ResourceLocation.parse("webdisplays:textures/item/model/minepad_item.png")));
 

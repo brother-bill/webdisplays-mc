@@ -17,6 +17,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.montoyo.wd.WebDisplays;
@@ -27,14 +28,30 @@ import net.montoyo.wd.net.server_bound.C2SMessageMinepadUrl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.UUID;
 
 public class ItemMinePad2 extends Item implements WDItem {
-    public ItemMinePad2(Properties properties) {
+    private final boolean upgraded;
+
+    public ItemMinePad2(Properties properties, boolean upgraded) {
         super(properties
                         .stacksTo(1)
 //				.tab(WebDisplays.CREATIVE_TAB)
         );
+        this.upgraded = upgraded;
+    }
+
+    public boolean isUpgraded() {
+        return upgraded;
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
+        if (upgraded) {
+            tooltip.add(net.minecraft.network.chat.Component.translatable("webdisplays.minepad2.info").withStyle(net.minecraft.ChatFormatting.RED));
+        }
     }
 
     private static String getURL(ItemStack is) {

@@ -6,15 +6,14 @@
   ],
   "key": {
     "P": {
-      "item": "webdisplays:craftcomp_peripheral",
-      "data": 2
+      "item": "webdisplays:craftcomp_peripheral"
     },
     "B": {
       "item": "minecraft:oak_button"
     }
   },
   "result": {
-    "item": "webdisplays:rctrl",
-    "data": 3
+    "id": "webdisplays:rctrl",
+    "count": 1
   }
 }

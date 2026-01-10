@@ -17,8 +17,7 @@
     }
   },
   "result": {
-    "item": "webdisplays:craftcomp_batcell",
-    "data": 3,
+    "id": "webdisplays:craftcomp_batcell",
     "count": 1
   }
 }

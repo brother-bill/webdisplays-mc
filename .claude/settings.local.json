@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(ls:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(powershell -Command:*)",
+      "WebFetch(domain:magpcss.org)",
+      "Bash(git submodule:*)",
+      "Bash(.gradlew publishToMavenLocal:*)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(git checkout:*)",
+      "Bash(cat:*)",
+      "Bash(comm -23:*)",
+      "Bash(comm:*)",
+      "Bash(python:*)",
+      "WebFetch(domain:modrepo.de)",
+      "WebFetch(domain:gnomebot.dev)",
+      "WebFetch(domain:docs.neoforged.net)"
+    ]
+  }
+}

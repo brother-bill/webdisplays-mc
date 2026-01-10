@@ -14,8 +14,7 @@
     }
   },
   "result": {
-    "item": "webdisplays:craftcomp_peripheral",
-    "data": 2,
+    "id": "webdisplays:craftcomp_peripheral",
     "count": 1
   }
 }

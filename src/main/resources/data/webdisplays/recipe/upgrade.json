@@ -10,13 +10,11 @@
       "item": "minecraft:quartz"
     },
     "E": {
-      "item": "webdisplays:craftcomp_extcard",
-      "data": 7
+      "item": "webdisplays:craftcomp_extcard"
     }
   },
   "result": {
-    "item": "webdisplays:craftcomp_upgrade",
-    "data": 1,
+    "id": "webdisplays:craftcomp_upgrade",
     "count": 1
   }
 }

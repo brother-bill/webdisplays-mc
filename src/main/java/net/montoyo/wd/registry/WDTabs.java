@@ -36,6 +36,7 @@ public class WDTabs {
 				output.accept(ItemRegistry.SERVER.get());
 				output.accept(ItemRegistry.CONFIGURATOR.get());
 				output.accept(ItemRegistry.MINEPAD.get());
+				output.accept(ItemRegistry.MINEPAD2.get());
 				output.accept(ItemRegistry.LASER_POINTER.get());
 
 				// upgrades

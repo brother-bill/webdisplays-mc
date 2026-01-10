@@ -17,6 +17,7 @@
     }
   },
   "result": {
-    "item": "webdisplays:screencfg"
+    "id": "webdisplays:screencfg",
+    "count": 1
   }
 }

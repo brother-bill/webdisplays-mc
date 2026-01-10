@@ -7,19 +7,17 @@
   ],
   "key": {
     "D": {
-      "item": "webdisplays:craftcomp_laserdiode",
-      "data": 5
+      "item": "webdisplays:craftcomp_laserdiode"
     },
     "C": {
-      "item": "webdisplays:craftcomp_batcell",
-      "data": 3
+      "item": "webdisplays:craftcomp_batcell"
     },
     "B": {
       "item": "minecraft:oak_button"
     }
   },
   "result": {
-    "item": "webdisplays:laserpointer",
+    "id": "webdisplays:laserpointer",
     "count": 1
   }
 }

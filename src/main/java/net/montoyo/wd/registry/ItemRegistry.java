@@ -27,7 +27,8 @@ public class ItemRegistry {
     public static final DeferredHolder<Item, Item> CONFIGURATOR = ITEMS.register("screencfg", () -> new ItemScreenConfigurator(new Item.Properties()));
     public static final DeferredHolder<Item, Item> OWNERSHIP_THEIF = ITEMS.register("ownerthief", () -> new ItemOwnershipThief(new Item.Properties()));
     public static final DeferredHolder<Item, Item> LINKER = ITEMS.register("linker", () -> new ItemLinker(new Item.Properties()));
-    public static final DeferredHolder<Item, Item> MINEPAD = ITEMS.register("minepad", () -> new ItemMinePad2(new Item.Properties()));
+    public static final DeferredHolder<Item, Item> MINEPAD = ITEMS.register("minepad", () -> new ItemMinePad2(new Item.Properties(), false));
+    public static final DeferredHolder<Item, Item> MINEPAD2 = ITEMS.register("minepad2", () -> new ItemMinePad2(new Item.Properties(), true));
     public static final DeferredHolder<Item, Item> LASER_POINTER = ITEMS.register("laserpointer", () -> new ItemLaserPointer(new Item.Properties()));
 
     static {

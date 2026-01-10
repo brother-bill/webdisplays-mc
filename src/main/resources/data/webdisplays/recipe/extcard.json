@@ -25,7 +25,7 @@
     }
   },
   "result": {
-    "item": "webdisplays:craftcomp_extcard",
-    "data": 7
+    "id": "webdisplays:craftcomp_extcard",
+    "count": 1
   }
 }

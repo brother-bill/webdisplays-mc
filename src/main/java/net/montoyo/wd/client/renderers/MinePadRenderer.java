@@ -118,7 +118,10 @@ public final class MinePadRenderer implements IItemRenderer {
 				stack.translate(0.063f, 0.28f, 0.001f);
 
 				RenderSystem.disableDepthTest();
+				RenderSystem.enableBlend();
+				RenderSystem.defaultBlendFunc();
 				RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+				RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f); // Full brightness
 				RenderSystem.setShaderTexture(0, ((MCEFBrowser) pd.view).getRenderer().getTextureID());
 				BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 				buffer.addVertex(stack.last().pose(), (float) x1, (float) y1, 0.0f).setUv(0.0F, 1.0F).setColor(255, 255, 255, 255);
@@ -126,6 +129,7 @@ public final class MinePadRenderer implements IItemRenderer {
 				buffer.addVertex(stack.last().pose(), (float) x2, (float) y2, 0.0f).setUv(1.0F, 0.0F).setColor(255, 255, 255, 255);
 				buffer.addVertex(stack.last().pose(), (float) x1, (float) y2, 0.0f).setUv(0.0F, 0.0F).setColor(255, 255, 255, 255);
 				BufferUploader.drawWithShader(buffer.buildOrThrow());
+				RenderSystem.disableBlend();
 				RenderSystem.enableDepthTest();
 			}
 		}

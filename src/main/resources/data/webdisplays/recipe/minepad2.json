@@ -10,13 +10,11 @@
       "item": "minecraft:diamond_block"
     },
     "M": {
-      "item": "webdisplays:minepad",
-      "data": 0
+      "item": "webdisplays:minepad"
     }
   },
   "result": {
-    "item": "webdisplays:minepad",
-    "data": 1,
+    "id": "webdisplays:minepad2",
     "count": 1
   }
 }

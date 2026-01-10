@@ -20,8 +20,7 @@
     }
   },
   "result": {
-    "item": "webdisplays:craftcomp_laserdiode",
-    "data": 5,
+    "id": "webdisplays:craftcomp_laserdiode",
     "count": 2
   }
 }
