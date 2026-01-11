@@ -275,6 +275,7 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 		super.preInit();
 		mc = Minecraft.getInstance();
 		NeoForge.EVENT_BUS.register(this);
+		NeoForge.EVENT_BUS.register(net.montoyo.wd.client.renderers.MinePadOverlayRenderer.class);
 	}
 	
 	@Override

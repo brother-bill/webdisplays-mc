@@ -159,5 +159,6 @@
   "webdisplays.gui.screencfg.syncmaster": "主机: %s",
   "webdisplays.gui.screencfg.syncmaster.none": "主机: 无",
   "webdisplays.gui.screencfg.autovol": "自动音量",
-  "webdisplays.gui.screencfg.avwarning": "§c注意! 自动音量仅适用于YouTube视频, 并且需要在客户端配置中启用!"
+  "webdisplays.gui.screencfg.avwarning": "§c注意! 自动音量仅适用于YouTube视频, 并且需要在客户端配置中启用!",
+  "config.webdisplays.screen_brightness": "屏幕亮度"
 }

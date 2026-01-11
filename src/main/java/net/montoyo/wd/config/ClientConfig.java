@@ -46,6 +46,17 @@ public class ClientConfig {
 	@Default(valueI = 720)
 	public static int padResolution = 720;
 
+	@Name("screen_brightness")
+	@Comment({
+			"Controls the brightness of WebDisplays screens (0.0 to 1.0)",
+			"0.0 = completely dark, 0.5 = 50% brightness, 1.0 = full brightness",
+			"Lower values help when using shaders that make screens too bright",
+	})
+	@Translation("config.webdisplays.screen_brightness")
+	@DoubleRange(minV = 0.0, maxV = 1.0)
+	@Default(valueD = 1.0)
+	public static double screenBrightness = 1.0;
+
 	@Name("side_pad")
 	@Comment({
 			"When this is true, the minePad is placed off to the side of the screen when held, so it's visible but doesn't take up too much of the screen",

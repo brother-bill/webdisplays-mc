@@ -162,5 +162,6 @@
     "webdisplays.gui.screencfg.syncnow": "Sync Maintenant",
     "webdisplays.gui.screencfg.syncnow.tooltip": "Forcer tous les spectateurs à se synchroniser avec votre temps de lecture.",
     "webdisplays.gui.screencfg.syncmaster": "Hôte : %s",
-    "webdisplays.gui.screencfg.syncmaster.none": "Hôte : Aucun"
+    "webdisplays.gui.screencfg.syncmaster.none": "Hôte : Aucun",
+    "config.webdisplays.screen_brightness": "Luminosité de l'écran"
 }

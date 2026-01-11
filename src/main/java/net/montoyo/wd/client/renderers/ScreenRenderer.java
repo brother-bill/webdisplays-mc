@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.montoyo.wd.WebDisplays;
+import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.entity.ScreenData;
 import net.montoyo.wd.utilities.math.Vector3f;
@@ -135,7 +136,8 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 			RenderSystem.enableDepthTest();
 			RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
 			RenderSystem.setShaderTexture(0, mcefBrowser.getRenderer().getTextureID());
-			RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+			float brightness = (float) ClientConfig.screenBrightness;
+			RenderSystem.setShaderColor(brightness, brightness, brightness, 1.0f);
 			BufferBuilder builder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 			builder.addVertex(poseStack.last().pose(), -sw, -sh, 0.505f).setUv(0.f, 1.f).setColor(1.f, 1.f, 1.f, 1.f);
 			builder.addVertex(poseStack.last().pose(), sw, -sh, 0.505f).setUv(1.f, 1.f).setColor(1.f, 1.f, 1.f, 1.f);
@@ -182,6 +184,8 @@ public class ScreenRenderer implements BlockEntityRenderer<ScreenBlockEntity> {
 			poseStack.popPose();
 		}
 
+		// Reset shader color to avoid affecting other renders
+		RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 //        //Bounding box debugging
 //        poseStack.pushPose();

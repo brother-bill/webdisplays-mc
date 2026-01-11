@@ -162,5 +162,6 @@
   "webdisplays.server.help.reconnect": "Reconnect to miniserv [DEBUG]",
   "webdisplays.server.press_for_more": "<Press DOWN to show more>",
   "webdisplays.key.toggle_mouse": "Toggle Laser Mouse (WebDisplays)",
-  "webdisplays.gui.minepad.close": "Press Shift and Escape to close."
+  "webdisplays.gui.minepad.close": "Press Shift and Escape to close.",
+  "config.webdisplays.screen_brightness": "Screen Brightness"
 }
