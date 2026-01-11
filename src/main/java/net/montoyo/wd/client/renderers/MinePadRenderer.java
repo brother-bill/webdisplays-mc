@@ -20,6 +20,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.montoyo.wd.WebDisplays;
 import net.montoyo.wd.client.ClientProxy;
+import net.montoyo.wd.client.compat.ImmediatelyFastCompat;
 import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.item.ItemMinePad2;
 
@@ -100,14 +101,17 @@ public final class MinePadRenderer implements IItemRenderer {
 		stack.translate(0.063f, 0.28f, 0.001f);
 		model.render(multiBufferSource, stack);
 		stack.translate(-0.063f, -0.28f, -0.001f);
-		
-		// force draw so the browser can be drawn ontop of the model
-		multiBufferSource.getBuffer(RenderType.LINES);
-		
+
+		// Force flush all batched content before rendering browser
+		// This is critical for ImmediatelyFast compatibility
+		if (multiBufferSource instanceof MultiBufferSource.BufferSource bufferSource) {
+			bufferSource.endBatch();
+		}
+
 		net.minecraft.nbt.CompoundTag tag = is.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
 		if (tag != null && tag.contains("PadID")) {
 			ClientProxy.PadData pd = clientProxy.getPadByID(tag.getUUID("PadID"));
-			
+
 			//Render web view
 			if (pd != null) {
 				double x1 = 0.0;
@@ -117,12 +121,17 @@ public final class MinePadRenderer implements IItemRenderer {
 
 				stack.translate(0.063f, 0.28f, 0.001f);
 
+				// Force ImmediatelyFast to flush its batched buffers before our custom rendering
+				ImmediatelyFastCompat.forceFlushBatching();
+
+				int textureId = ((MCEFBrowser) pd.view).getRenderer().getTextureID();
+
 				RenderSystem.disableDepthTest();
 				RenderSystem.enableBlend();
 				RenderSystem.defaultBlendFunc();
 				RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
 				RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f); // Full brightness
-				RenderSystem.setShaderTexture(0, ((MCEFBrowser) pd.view).getRenderer().getTextureID());
+				RenderSystem.setShaderTexture(0, textureId);
 				BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 				buffer.addVertex(stack.last().pose(), (float) x1, (float) y1, 0.0f).setUv(0.0F, 1.0F).setColor(255, 255, 255, 255);
 				buffer.addVertex(stack.last().pose(), (float) x2, (float) y1, 0.0f).setUv(1.0F, 1.0F).setColor(255, 255, 255, 255);

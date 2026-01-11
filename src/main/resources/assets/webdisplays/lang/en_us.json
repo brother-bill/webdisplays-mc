@@ -46,7 +46,7 @@
   "webdisplays.message.linkError": "Link error :( Check logs...",
   "webdisplays.message.notAScreen": "Please right click on the screen first...",
   "webdisplays.message.screenSet2": "Screen set! Now right click on the peripheral...",
-  "webdisplays.message.chunkUnloaded": "The chunk the screen is placed in is no,t loaded!",
+  "webdisplays.message.chunkUnloaded": "The chunk the screen is placed in is not loaded!",
   "webdisplays.message.notLinked": "This peripheral has not been linked yet.",
   "webdisplays.message.missingCC": "ComputerCraft is not available.",
   "webdisplays.message.missingOC": "OpenComputers is not available.",

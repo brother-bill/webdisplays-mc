@@ -42,11 +42,21 @@ public class ItemLaserPointer extends Item implements WDItem {
 	private static ScreenBlockEntity pointedScreen;
 	private static BlockSide pointedScreenSide;
 	private static long lastPointPacket;
-	
-	private static boolean mouseDown = false;
+
 	private static boolean left;
 	private static boolean middle;
 	private static boolean right;
+
+	/**
+	 * Get the currently held button for drag operations ;)
+	 * Returns -1 if no button is held, 0 for left, 1 for right, 2 for middle.
+	 */
+	private static int getHeldButton() {
+		if (left) return 0;
+		if (right) return 1;
+		if (middle) return 2;
+		return -1;
+	}
 	
 	public static void tick(Minecraft mc) {
 		BlockHitResult result = ClientProxy.raycast(64.0); //TODO: Make that distance configurable
@@ -83,13 +93,16 @@ public class ItemLaserPointer extends Item implements WDItem {
 	}
 	
 	private static void laserClick(ScreenBlockEntity tes, BlockSide side, ScreenData scr, Vector2i hit) {
-		tes.handleMouseEvent(side, ClickControl.ControlType.MOVE, hit, -1);
+		int heldButton = getHeldButton();
+		tes.handleMouseEvent(side, ClickControl.ControlType.MOVE, hit, heldButton);
 		if (pointedScreen == tes && pointedScreenSide == side) {
 			long t = System.currentTimeMillis();
-			
-			if (t - lastPointPacket >= 100) {
+
+			// Send more frequently during drag operations for smoother scrollbar movement
+			int interval = (heldButton >= 0) ? 50 : 100;
+			if (t - lastPointPacket >= interval) {
 				lastPointPacket = t;
-				WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.laserMove(tes, side, hit));
+				WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.laserMove(tes, side, hit, heldButton));
 			}
 		} else {
 			deselectScreen();
@@ -108,7 +121,7 @@ public class ItemLaserPointer extends Item implements WDItem {
 	public static void press(boolean press, int button) {
 		if (button <= 1 && ClientConfig.Input.switchButtons)
 			button = 1 - button;
-		
+
 		if (button == 0) left = press;
 		else if (button == 1) right = press;
 		else if (button == 2) middle = press;

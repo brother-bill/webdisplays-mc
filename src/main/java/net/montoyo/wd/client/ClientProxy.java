@@ -47,6 +47,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderHighlightEvent;
@@ -997,7 +998,26 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 			Client.getInstance().stop();
 		}
 	}
-	
+
+	@SubscribeEvent
+	public void onMouseInput(InputEvent.MouseButton.Pre ev) {
+		if (mc.screen != null) return;
+		if (mc.player == null || mc.level == null) return;
+
+		Item heldItem = mc.player.getItemInHand(InteractionHand.MAIN_HAND).getItem();
+		if (!heldItem.equals(ItemRegistry.LASER_POINTER.get())) return;
+
+		HitResult hitResult = mc.hitResult;
+		if (hitResult != null && hitResult.getType() != HitResult.Type.BLOCK && hitResult.getType() != HitResult.Type.MISS) return;
+
+		int button = ev.getButton();
+		int action = ev.getAction();
+		boolean press = (action == GLFW.GLFW_PRESS);
+
+		ItemLaserPointer.press(press, button);
+		ev.setCanceled(true);
+	}
+
 	@SubscribeEvent
 	public void onRenderPlayerHand(RenderHandEvent ev) {
 		Item item = ev.getItemStack().getItem();

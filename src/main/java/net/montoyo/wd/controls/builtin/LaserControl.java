@@ -42,15 +42,16 @@ public class LaserControl extends ScreenControl {
 		type = ControlType.values()[buf.readByte()];
 		if (!type.equals(ControlType.UP))
 			coord = new Vector2i(buf);
-		if (!type.equals(ControlType.MOVE))
-			button = buf.readInt();
+		// Always read button - it's always written now
+		button = buf.readInt();
 	}
-	
+
 	@Override
 	public void write(FriendlyByteBuf buf) {
 		buf.writeByte(type.ordinal());
 		if (coord != null) coord.writeTo(buf);
-		if (type != ControlType.MOVE) buf.writeInt(button);
+		// Always write button for all event types (needed for drag support)
+		buf.writeInt(button);
 	}
 	
 	@Override
@@ -69,8 +70,8 @@ public class LaserControl extends ScreenControl {
 	@OnlyIn(Dist.CLIENT)
 	public void handleClient(BlockPos pos, BlockSide side, ScreenBlockEntity tes, IPayloadContext ctx) {
 		if (coord != null)
-			tes.handleMouseEvent(side, ClickControl.ControlType.MOVE, coord, -1);
-		
+			tes.handleMouseEvent(side, ClickControl.ControlType.MOVE, coord, button);
+
 		switch (type) {
 			case UP -> tes.handleMouseEvent(side, ClickControl.ControlType.UP, coord, button);
 			case DOWN -> tes.handleMouseEvent(side, ClickControl.ControlType.DOWN, coord, button);

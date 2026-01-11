@@ -5,6 +5,7 @@
 package net.montoyo.wd.entity;
 
 import com.cinemamod.mcef.MCEFBrowser;
+import org.cef.event.CefMouseEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -54,6 +55,7 @@ import net.montoyo.wd.utilities.math.Vector3f;
 import net.montoyo.wd.utilities.math.Vector3i;
 import net.montoyo.wd.utilities.serialization.NameUUIDPair;
 import net.montoyo.wd.utilities.serialization.TypeData;
+import net.montoyo.wd.utilities.browser.WDClientBrowser;
 import org.cef.browser.CefBrowser;
 
 import javax.annotation.Nonnull;
@@ -403,8 +405,26 @@ public class ScreenBlockEntity extends BlockEntity {
             } else if (event == ClickControl.ControlType.DOWN) {
                 mcefBrowser.sendMouseMove(vec.x, vec.y);                                            //Move to target
                 mcefBrowser.sendMousePress(vec.x, vec.y, button);                              //Press
-            } else if (event == ClickControl.ControlType.MOVE)
-                mcefBrowser.sendMouseMove(vec.x, vec.y);                                            //Move
+            } else if (event == ClickControl.ControlType.MOVE) {
+                // For drag operations, we need to send mouse move with button modifiers
+                // button >= 0 means a button is being held during the move (drag)
+                if (button >= 0 && mcefBrowser instanceof WDClientBrowser wdBrowser) {
+                    // Calculate modifiers based on which button is held
+                    // BUTTON1_MASK=16 (left), BUTTON2_MASK=32 (middle), BUTTON3_MASK=64 (right)
+                    int modifiers = switch (button) {
+                        case 0 -> 16;  // Left button (BUTTON1_MASK)
+                        case 1 -> 64;  // Right button (BUTTON3_MASK) - note: already swapped above
+                        case 2 -> 32;  // Middle button (BUTTON2_MASK)
+                        default -> 0;
+                    };
+                    // MOUSE_MOVED = 503
+                    // CefMouseEvent constructor order is: (id, x, y, clickCount, button, modifiers)
+                    CefMouseEvent mouseEvent = new CefMouseEvent(503, vec.x, vec.y, 0, button, modifiers);
+                    wdBrowser.sendMouseEventPublic(mouseEvent);
+                } else {
+                    mcefBrowser.sendMouseMove(vec.x, vec.y);                                        //Move (no drag)
+                }
+            }
             else if (event == ClickControl.ControlType.UP)
                 mcefBrowser.sendMouseRelease(scr.lastMousePos.x, scr.lastMousePos.y, button);  //Release
 
@@ -952,12 +972,13 @@ public class ScreenBlockEntity extends BlockEntity {
         ScreenData scr = getScreenForLaserOp(side, ply);
 
         if (scr != null) {
-            if (button == -1)
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.click(this, side, ClickControl.ControlType.MOVE, pos));
-            else if (down)
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.click(this, side, ClickControl.ControlType.DOWN, pos));
-            else
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.click(this, side, ClickControl.ControlType.UP, pos));
+            if (down) {
+                // Button press event
+                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.DOWN, pos, button));
+            } else {
+                // Move event (with or without button held for drag)
+                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.MOVE, pos, button));
+            }
         }
     }
 
@@ -967,7 +988,7 @@ public class ScreenBlockEntity extends BlockEntity {
         if (scr != null) {
             if (getLaserUser(scr) == ply) {
                 scr.laserUser = null;
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.click(this, side, ClickControl.ControlType.UP, null));
+                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.UP, null, button));
             }
         }
     }

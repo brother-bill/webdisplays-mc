@@ -83,6 +83,20 @@ public class S2CMessageScreenUpdate extends Packet {
         return screenUpdate;
     }
 
+    /**
+     * Create a laser event that includes button state for drag support
+     */
+    public static S2CMessageScreenUpdate laserEvent(ScreenBlockEntity screen, BlockSide side, ClickControl.ControlType eventType, Vector2i pos, int button) {
+        S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
+        LaserControl.ControlType laserType = switch (eventType) {
+            case DOWN -> LaserControl.ControlType.DOWN;
+            case UP -> LaserControl.ControlType.UP;
+            default -> LaserControl.ControlType.MOVE;
+        };
+        screenUpdate.control = new LaserControl(laserType, pos, button);
+        return screenUpdate;
+    }
+
     public static S2CMessageScreenUpdate type(ScreenBlockEntity screen, BlockSide side, String text) {
         S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
         screenUpdate.control = new KeyTypedControl(text, screenUpdate.pos);

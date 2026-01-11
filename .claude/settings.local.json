@@ -17,7 +17,9 @@
       "Bash(python:*)",
       "WebFetch(domain:modrepo.de)",
       "WebFetch(domain:gnomebot.dev)",
-      "WebFetch(domain:docs.neoforged.net)"
+      "WebFetch(domain:docs.neoforged.net)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(findstr:*)"
     ]
   }
 }

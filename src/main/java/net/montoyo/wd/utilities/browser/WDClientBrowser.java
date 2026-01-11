@@ -2,6 +2,7 @@ package net.montoyo.wd.utilities.browser;
 
 import com.cinemamod.mcef.MCEFBrowser;
 import com.cinemamod.mcef.MCEFClient;
+import org.cef.event.CefMouseEvent;
 import net.montoyo.wd.entity.ScreenBlockEntity;
 import net.montoyo.wd.utilities.browser.handlers.js.queries.ElementCenterQuery;
 import net.montoyo.wd.utilities.browser.handlers.js.JSQueryHandler;
@@ -53,5 +54,13 @@ public class WDClientBrowser extends MCEFBrowser implements WDBrowser {
     @Override
     public BlockSide getSide() {
         return side;
+    }
+
+    /**
+     * Public wrapper for the protected sendMouseEvent method.
+     * Needed for drag operations that require mouse modifiers.
+     */
+    public void sendMouseEventPublic(CefMouseEvent event) {
+        sendMouseEvent(event);
     }
 }

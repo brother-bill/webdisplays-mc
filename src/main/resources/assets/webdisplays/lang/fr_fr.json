@@ -152,5 +152,15 @@
     "webdisplays.server.help.url": "Copie l'URL d'un fichier",
     "webdisplays.server.help.upload": "Ouvre l'assitant de mise en ligne",
     "webdisplays.server.help.rm": "Supprime un fichier",
-    "webdisplays.server.help.reconnect": "Se reco. à Miniserv [DEBUG]"
+    "webdisplays.server.help.reconnect": "Se reco. à Miniserv [DEBUG]",
+    "webdisplays.server.press_for_more": "<Appuyez sur BAS pour afficher plus>",
+    "webdisplays.key.toggle_mouse": "Activer/Désactiver souris laser (WebDisplays)",
+    "webdisplays.gui.minepad.close": "Appuyez sur Shift et Echap pour fermer.",
+    "webdisplays.gui.screencfg.videosync": "Synchro Vidéo :",
+    "webdisplays.gui.screencfg.syncenabled": "Activer Sync",
+    "webdisplays.gui.screencfg.syncenabled.tooltip": "Active la synchronisation vidéo pour tous les spectateurs.",
+    "webdisplays.gui.screencfg.syncnow": "Sync Maintenant",
+    "webdisplays.gui.screencfg.syncnow.tooltip": "Forcer tous les spectateurs à se synchroniser avec votre temps de lecture.",
+    "webdisplays.gui.screencfg.syncmaster": "Hôte : %s",
+    "webdisplays.gui.screencfg.syncmaster.none": "Hôte : Aucun"
 }

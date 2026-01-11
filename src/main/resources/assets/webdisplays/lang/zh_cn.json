@@ -147,5 +147,17 @@
   "webdisplays.server.help.url": "复制一个文件网址到你的剪切板",
   "webdisplays.server.help.upload": "打开上传向导",
   "webdisplays.server.help.rm": "删除一个文件",
-  "webdisplays.server.help.reconnect": "重新连接到服务器[调试中]"
+  "webdisplays.server.help.reconnect": "重新连接到服务器[调试中]",
+  "webdisplays.server.press_for_more": "<按下键显示更多>",
+  "webdisplays.key.toggle_mouse": "切换激光鼠标 (WebDisplays)",
+  "webdisplays.gui.minepad.close": "按住Shift并按Esc键关闭。",
+  "webdisplays.gui.screencfg.videosync": "视频同步:",
+  "webdisplays.gui.screencfg.syncenabled": "启用同步",
+  "webdisplays.gui.screencfg.syncenabled.tooltip": "为所有观看者启用视频播放同步。",
+  "webdisplays.gui.screencfg.syncnow": "立即同步",
+  "webdisplays.gui.screencfg.syncnow.tooltip": "强制所有观看者同步到当前主机的播放时间。",
+  "webdisplays.gui.screencfg.syncmaster": "主机: %s",
+  "webdisplays.gui.screencfg.syncmaster.none": "主机: 无",
+  "webdisplays.gui.screencfg.autovol": "自动音量",
+  "webdisplays.gui.screencfg.avwarning": "§c注意! 自动音量仅适用于YouTube视频, 并且需要在客户端配置中启用!"
 }
