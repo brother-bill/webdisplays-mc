@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "webdisplays:block/screen_thin" },
+    "facing=south": { "model": "webdisplays:block/screen_thin" },
+    "facing=west":  { "model": "webdisplays:block/screen_thin" },
+    "facing=east":  { "model": "webdisplays:block/screen_thin" },
+    "facing=up":    { "model": "webdisplays:block/screen_thin" },
+    "facing=down":  { "model": "webdisplays:block/screen_thin" }
+  }
+}

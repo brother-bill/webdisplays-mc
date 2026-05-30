@@ -47,6 +47,16 @@ public class ScreenData {
     public final Vector2i lastMousePos = new Vector2i();
     public NibbleArray redstoneStatus; //null on client
     public boolean autoVolume = true;
+    // Per-screen owner-controlled master volume multiplier (0..100). Applied in
+    // ScreenBlockEntity.updateTrackDistance as the final scaling factor:
+    //   final_vol = (ownerVolume/100) * distance_attenuation * MC_master * global_cap
+    // Default 100 = full owner volume. Editable from the screen configurator GUI by
+    // the screen owner (or whoever has MANAGE_UPGRADES rights, matching autoVolume).
+    public int ownerVolume = 100;
+    // CLIENT-SIDE per-screen cache: the last volume we pushed via JS for this screen.
+    // Used by ScreenBlockEntity.updateTrackDistance to avoid re-pushing JS when volume
+    // hasn't changed perceptibly. Not serialized (always recomputed on first push).
+    public float lastPushedVolume = -1.0f;
 
     public int mouseType;
 
@@ -126,8 +136,23 @@ public class ScreenData {
         if (tag.contains("AutoVolume"))
             ret.autoVolume = tag.getBoolean("AutoVolume");
 
+        if (tag.contains("OwnerVolume"))
+            ret.ownerVolume = Math.max(0, Math.min(100, tag.getInt("OwnerVolume")));
+
         if (tag.contains("SyncEnabled"))
             ret.userSyncEnabled = tag.getBoolean("SyncEnabled");
+
+        // Sync state — sent with getUpdateTag so late-joining players can sync to the master's
+        // current playback position immediately, instead of waiting for the next broadcast tick.
+        // Fixes hiiiq / Mysticpasta1 reports of players seeing out-of-sync screens.
+        if (tag.hasUUID("SyncMaster"))
+            ret.syncMasterUUID = tag.getUUID("SyncMaster");
+        if (tag.contains("SyncTime"))
+            ret.syncPlaybackTime = tag.getDouble("SyncTime");
+        if (tag.contains("SyncPaused"))
+            ret.syncPaused = tag.getBoolean("SyncPaused");
+        if (tag.contains("SyncTs"))
+            ret.syncUpdateTimestamp = tag.getLong("SyncTs");
 
         return ret;
     }
@@ -168,7 +193,16 @@ public class ScreenData {
 
         tag.put("Upgrades", list);
         tag.putBoolean("AutoVolume", autoVolume);
+        tag.putInt("OwnerVolume", ownerVolume);
         tag.putBoolean("SyncEnabled", userSyncEnabled);
+
+        // Sync state — see deserialize() for rationale (late-joiner sync fix).
+        if (syncMasterUUID != null)
+            tag.putUUID("SyncMaster", syncMasterUUID);
+        tag.putDouble("SyncTime", syncPlaybackTime);
+        tag.putBoolean("SyncPaused", syncPaused);
+        tag.putLong("SyncTs", syncUpdateTimestamp);
+
         return tag;
     }
 

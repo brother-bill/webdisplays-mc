@@ -109,6 +109,7 @@ public class WebDisplays {
     public float ytVolume;
     public float avDist100;
     public float avDist0;
+    public int screenBroadcastRadius = 128; // server-side config; cached in CommonConfig.postLoad
 
     // mod detection
     private boolean hasOC;

@@ -6,12 +6,21 @@ package net.montoyo.wd.utilities;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.LevelAccessor;
-import net.montoyo.wd.registry.BlockRegistry;
+import net.minecraft.world.level.block.Block;
+import net.montoyo.wd.block.ScreenBlock;
 import net.montoyo.wd.utilities.math.Vector2i;
 import net.montoyo.wd.utilities.math.Vector3i;
 import net.montoyo.wd.utilities.data.BlockSide;
 
 public abstract class Multiblock {
+
+    // Connectivity check: ScreenBlock (thick) AND ScreenThinBlock (thin subclass) both
+    // count as screen blocks for multiblock purposes. Mixing thin+thick in one structure
+    // is permitted in V1 but will look visually inconsistent; users should keep them separate.
+    public static boolean isScreenBlock(Block b) {
+        return b instanceof ScreenBlock;
+    }
+
     public enum OverrideAction {
         NONE,
         SIMULATE,
@@ -51,7 +60,7 @@ public abstract class Multiblock {
         do {
             pos.add(side.left);
             pos.toBlock(bp);
-        } while (override.apply(pos, world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get()));
+        } while (override.apply(pos, isScreenBlock(world.getBlockState(bp).getBlock())));
 
         pos.add(side.right);
 
@@ -59,7 +68,7 @@ public abstract class Multiblock {
         do {
             pos.add(side.down);
             pos.toBlock(bp);
-        } while (override.apply(pos, world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get()));
+        } while (override.apply(pos, isScreenBlock(world.getBlockState(bp).getBlock())));
 
         pos.add(side.up);
     }
@@ -77,7 +86,7 @@ public abstract class Multiblock {
             pos.add(side.up);
             pos.toBlock(bp);
             ret.y++;
-        } while (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get());
+        } while (isScreenBlock(world.getBlockState(bp).getBlock()));
 
         pos.add(side.down);
 
@@ -86,7 +95,7 @@ public abstract class Multiblock {
             pos.add(side.right);
             pos.toBlock(bp);
             ret.x++;
-        } while (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get());
+        } while (isScreenBlock(world.getBlockState(bp).getBlock()));
 
         return ret;
     }
@@ -101,17 +110,17 @@ public abstract class Multiblock {
         for (int y = 0; y < size.y; y++) {
             for (int x = 0; x < size.x; x++) {
                 pos.toBlock(bp);
-                if (!(world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get()))
+                if (!(isScreenBlock(world.getBlockState(bp).getBlock())))
                     return pos; //Hole
 
                 pos.add(side.forward);
                 pos.toBlock(bp);
-                if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
+                if (isScreenBlock(world.getBlockState(bp).getBlock()))
                     return pos; //Back should be empty
 
                 pos.addMul(side.backward, 2);
                 pos.toBlock(bp);
-                if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
+                if (isScreenBlock(world.getBlockState(bp).getBlock()))
                     return pos; //Front should be empty
 
                 pos.add(side.forward);
@@ -128,7 +137,7 @@ public abstract class Multiblock {
 
         for (int y = 0; y < size.y; y++) {
             pos.toBlock(bp);
-            if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
+            if (isScreenBlock(world.getBlockState(bp).getBlock()))
                 return pos; //Left edge should be empty
 
             pos.add(side.up);
@@ -140,7 +149,7 @@ public abstract class Multiblock {
 
         for (int y = 0; y < size.y; y++) {
             pos.toBlock(bp);
-            if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
+            if (isScreenBlock(world.getBlockState(bp).getBlock()))
                 return pos; //Left edge should be empty
 
             pos.add(side.up);
@@ -152,7 +161,7 @@ public abstract class Multiblock {
 
         for (int x = 0; x < size.x; x++) {
             pos.toBlock(bp);
-            if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
+            if (isScreenBlock(world.getBlockState(bp).getBlock()))
                 return pos; //Left edge should be empty
 
             pos.add(side.right);
@@ -164,7 +173,7 @@ public abstract class Multiblock {
 
         for (int x = 0; x < size.x; x++) {
             pos.toBlock(bp);
-            if (world.getBlockState(bp).getBlock() == BlockRegistry.SCREEN_BLOCk.get())
+            if (isScreenBlock(world.getBlockState(bp).getBlock()))
                 return pos; //Left edge should be empty
 
             pos.add(side.right);

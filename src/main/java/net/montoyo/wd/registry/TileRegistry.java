@@ -14,7 +14,9 @@ public class TileRegistry {
     //Register tile entities
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ScreenBlockEntity>> SCREEN_BLOCK_ENTITY = TILE_TYPES
             .register("screen", () -> BlockEntityType.Builder
-                    .of(ScreenBlockEntity::new, BlockRegistry.SCREEN_BLOCk.get()).build(null));
+                    .of(ScreenBlockEntity::new,
+                        BlockRegistry.SCREEN_BLOCk.get(),
+                        BlockRegistry.SCREEN_THIN_BLOCK.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<KeyboardBlockEntity>> KEYBOARD = TILE_TYPES.register("kb_left", () -> BlockEntityType.Builder
             .of(KeyboardBlockEntity::new, BlockRegistry.KEYBOARD_BLOCK.get()).build(null));

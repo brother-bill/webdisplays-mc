@@ -22,7 +22,16 @@ minecraft.accessTransformers.file rootProject.file('src/main/resources/META-INF/
 runs {
     configureEach {
         systemProperty 'forge.logging.markers', 'REGISTRIES'
-        systemProperty 'forge.logging.console.level', 'debug'
+        // info-level avoids ~300+ MB of OpenGL GlDebug spam per session in logs/latest.log.
+        // Our own debug logging is gated on webdisplays.debug / webdisplays.audiodiag and uses
+        // INFO-level explicitly, so reducing forge console level doesn't hide WD diagnostics.
+        // To opt back in to forge's debug output, override at the CLI: gradlew runClient -Dforge.logging.console.level=debug
+        systemProperty 'forge.logging.console.level', System.getProperty('forge.logging.console.level', 'info')
+        // Forward our DEBUG / DIAG / AUDIODIAG flags from gradle to the spawned Minecraft JVM.
+        // Enable with: gradlew runClient -Dwebdisplays.debug=true -Dwebdisplays.diag=true -Dwebdisplays.audiodiag=true
+        systemProperty 'webdisplays.debug', System.getProperty('webdisplays.debug', 'false')
+        systemProperty 'webdisplays.diag', System.getProperty('webdisplays.diag', 'false')
+        systemProperty 'webdisplays.audiodiag', System.getProperty('webdisplays.audiodiag', 'false')
         modSource project.sourceSets.main
     }
 
@@ -50,8 +59,8 @@ configurations {
 repositories {
     mavenLocal()
     maven {
-        name = "CinemaMod MCEF"
-        url = "https://mcef-download.cinemamod.com/repositories/releases/"
+        name = "Keksuccino MCEF"
+        url = "https://keksuccino.github.io/maven/"
     }
     maven {
         name = "cursemaven"
@@ -63,8 +72,9 @@ dependencies {
     // NeoForge
     implementation "net.neoforged:neoforge:${neo_version}"
 
-    // MCEF - Chromium Embedded Framework for Minecraft
-    implementation "com.cinemamod:mcef-neoforge:${mcef_version}"
+    // MCEF (Keksuccino's fork — CinemaMod downstream with render-thread + NeoForge fixes)
+    // Same Chromium 116.0.5845.190 as upstream; preserves com.cinemamod.mcef.* packages and modId.
+    implementation "de.keksuccino:mcef-neoforge:${mcef_version}"
 }
 
 // Process resources - replace placeholders in neoforge.mods.toml

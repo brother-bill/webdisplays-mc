@@ -131,6 +131,12 @@ public class GuiScreenConfig extends WDScreen {
     @FillControl
     private Label lblSyncMaster;
 
+    @FillControl
+    private Button btnTurnOff;
+
+    @FillControl
+    private TextField tfOwnerVolume;
+
     private CheckBox[] friendBoxes;
     private CheckBox[] otherBoxes;
 
@@ -174,6 +180,7 @@ public class GuiScreenConfig extends WDScreen {
             //Hopefully upgrades have been synchronized...
             ugUpgrades.setUpgrades(scr.upgrades);
             cbAutoVolume.setChecked(scr.autoVolume);
+            tfOwnerVolume.setText("" + scr.ownerVolume);
 
             // Update video sync UI
             updateSyncUI(scr);
@@ -243,7 +250,21 @@ public class GuiScreenConfig extends WDScreen {
             // Request force sync - server will broadcast current master's time to all viewers
             WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.forceSync(tes, side));
             Log.info("[VideoSync] Force sync requested via UI");
+        } else if(ev.getSource() == btnTurnOff) {
+            // Set URL to about:blank — turns off the visible content. Sync to all watchers
+            // happens server-side via the standard setURL broadcast (S2CMessageScreenUpdate.setURL
+            // → WDNetworkRegistry.sendToNear at screen_broadcast_radius).
+            WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.setURL(tes, side, "about:blank", null));
         }
+    }
+
+    private void applyOwnerVolume() {
+        int v;
+        try { v = Integer.parseInt(tfOwnerVolume.getText().trim()); }
+        catch(NumberFormatException ex) { v = 100; }
+        v = Math.max(0, Math.min(100, v));
+        tfOwnerVolume.setText("" + v);
+        WDNetworkRegistry.sendToServer(C2SMessageScreenCtrl.ownerVol(tes, side, v));
     }
 
     @GuiSubscribe
@@ -252,6 +273,8 @@ public class GuiScreenConfig extends WDScreen {
             addFriend(ev.getText().trim());
         else if((ev.getSource() == tfResX || ev.getSource() == tfResY) && !btnSetRes.isDisabled())
             clickSetRes();
+        else if(ev.getSource() == tfOwnerVolume)
+            applyOwnerVolume();
     }
 
     @GuiSubscribe
@@ -274,6 +297,16 @@ public class GuiScreenConfig extends WDScreen {
 
     @GuiSubscribe
     public void onTextChanged(TextField.TextChangedEvent ev) {
+        if(ev.getSource() == tfOwnerVolume) {
+            // digits only — Enter on the field applies; Tab/click-away does too
+            for(int i = 0; i < ev.getNewContent().length(); i++) {
+                if(!Character.isDigit(ev.getNewContent().charAt(i))) {
+                    ev.getSource().setText(ev.getOldContent());
+                    return;
+                }
+            }
+            return;
+        }
         if(ev.getSource() == tfResX || ev.getSource() == tfResY) {
             for(int i = 0; i < ev.getNewContent().length(); i++) {
                 if(!Character.isDigit(ev.getNewContent().charAt(i))) {

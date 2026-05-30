@@ -46,6 +46,7 @@ public class ItemRegistry {
     }
 
     public static final DeferredHolder<Item, Item> SCREEN = ITEMS.register("screen", () -> new BlockItem(BlockRegistry.SCREEN_BLOCk.get(), new Item.Properties()));
+    public static final DeferredHolder<Item, Item> SCREEN_THIN = ITEMS.register("screen_thin", () -> new BlockItem(BlockRegistry.SCREEN_THIN_BLOCK.get(), new Item.Properties()));
 
     public static final DeferredHolder<Item, Item> KEYBOARD = ITEMS.register("keyboard", () -> new KeyboardItem(BlockRegistry.KEYBOARD_BLOCK.get(), new Item.Properties()));
     public static final DeferredHolder<Item, Item> REDSTONE_CONTROLLER = ITEMS.register("redctrl", () -> new BlockItem(BlockRegistry.REDSTONE_CONTROL_BLOCK.get(), new Item.Properties()));

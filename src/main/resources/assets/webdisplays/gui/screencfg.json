@@ -239,6 +239,29 @@
       "y": 216,
       "label": "",
       "shadowed": false
+    },
+    {
+      "type": "Button",
+      "name": "btnTurnOff",
+      "x": 257,
+      "y": 232,
+      "width": 32,
+      "label": "$webdisplays.gui.screencfg.turnoff.short",
+      "tooltip": "$webdisplays.gui.screencfg.turnoff.tooltip"
+    },
+    {
+      "type": "Label",
+      "x": 293,
+      "y": 235,
+      "label": "$webdisplays.gui.screencfg.ownervol"
+    },
+    {
+      "type": "TextField",
+      "name": "tfOwnerVolume",
+      "x": 311,
+      "y": 232,
+      "width": 33,
+      "maxLength": 3
     }
   ],
   "center": true

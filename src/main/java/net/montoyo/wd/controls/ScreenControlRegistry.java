@@ -56,6 +56,7 @@ public class ScreenControlRegistry {
         register(SetURLControl.id, new ScreenControlType<>(SetURLControl.class, SetURLControl::new));
         register(KeyTypedControl.id, new ScreenControlType<>(KeyTypedControl.class, KeyTypedControl::new));
         register(AutoVolumeControl.id, new ScreenControlType<>(AutoVolumeControl.class, AutoVolumeControl::new));
+        register(OwnerVolumeControl.id, new ScreenControlType<>(OwnerVolumeControl.class, OwnerVolumeControl::new));
         register(JSRequestControl.id, new ScreenControlType<>(JSRequestControl.class, JSRequestControl::new));
         register(LaserControl.id, new ScreenControlType<>(LaserControl.class, LaserControl::new));
         register(ScreenModifyControl.id, new ScreenControlType<>(ScreenModifyControl.class, ScreenModifyControl::new));

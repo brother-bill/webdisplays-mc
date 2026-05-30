@@ -26,3 +26,25 @@ logs/
 eclipse/
 /_OLD/
 *.log
+
+config/
+downloads/
+mods/
+saves/
+resourcepacks/
+defaultconfigs/
+options.txt
+usercache.json
+usernamecache.json
+hs_err_pid*.log
+*.hprof
+
+tmpclaude-*
+.claude_renderdoc_cmd.txt
+.claude/
+
+# Per-release notes — pasted directly into GitHub Release / CurseForge upload page, not tracked here
+RELEASE_NOTES.md
+PLAN.md
+run-client-*.bat
+run-client-*.ps1

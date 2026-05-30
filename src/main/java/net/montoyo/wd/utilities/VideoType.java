@@ -188,10 +188,61 @@ public enum VideoType {
         return String.format(format, vid);
     }
 
-    // TODO: timestamp stuff
+    // Returns a complete JS expression that sets the player's volume.
+    // Previously this returned just `setVolume(N)` with no base — i.e. invalid JS that silently
+    // did nothing, which is why spatial-audio "worked in Java" but volume never actually changed.
+    // Now wraps in try/catch and prepends the player base, matching getSeekJS / getPlayPauseJS pattern.
     @Nonnull
     public String getVolumeJSQuery(int volInt, int volFrac) {
-        return volume.apply(volInt + "." + volFrac);
+        String vol = volInt + "." + volFrac;
+        if (this == YOUTUBE || this == YOUTUBE_EMBED) {
+            // YouTube setVolume takes 0-100 integer (decimals are rounded down).
+            // Chain to genericHTML5JS so embedded media (the embedded player IS a video element)
+            // also gets attenuated as belt-and-suspenders.
+            return "(function(){try{var p=" + base.substring(0, base.length() - 1) + ";" +
+                   "if(p&&p.setVolume)p.setVolume(" + vol + ");}catch(e){}})();" +
+                   genericMediaVolumeJS(vol);
+        } else if (this == GENERIC_HTML5) {
+            return genericMediaVolumeJS(vol);
+        }
+        return "";
+    }
+
+    /**
+     * Generic JS that sets {@code .volume} on every {@code <video>} and {@code <audio>}
+     * element in the document, and recurses into same-origin iframes. Used as a fallback
+     * for arbitrary URLs that aren't recognised as a specific {@link VideoType} — covers
+     * the majority of HTML5 media on the modern web.
+     *
+     * <p>Limitations: cross-origin iframes can't be reached (browser security). Pages that
+     * route audio through Web Audio API (gain nodes) won't honour the element-level volume.
+     * Embedded Flash and custom player implementations also escape this. For those a proper
+     * fix requires intercepting via {@code CefAudioHandler} at the engine level.
+     */
+    @Nonnull
+    public static String genericMediaVolumeJS(String volStr) {
+        return "(function(){try{" +
+               "var els=document.querySelectorAll('video,audio');" +
+               "for(var i=0;i<els.length;i++){try{els[i].volume=" + volStr + "/100;}catch(e){}}" +
+               "var ifr=document.querySelectorAll('iframe');" +
+               "for(var j=0;j<ifr.length;j++){try{" +
+               "var es=ifr[j].contentDocument.querySelectorAll('video,audio');" +
+               "for(var k=0;k<es.length;k++){try{es[k].volume=" + volStr + "/100;}catch(e){}}" +
+               "}catch(e){}}" +
+               "}catch(e){}})()";
+    }
+
+    /**
+     * Resolve a {@link VideoType} for a URL, falling back to {@link #GENERIC_HTML5} when no
+     * specific match exists. This is the entry point for volume control — using
+     * {@link #getTypeFromURL} alone returns null for arbitrary URLs (no whitelist match),
+     * which causes volume attenuation to be skipped. For attenuation purposes we always
+     * have at least the GENERIC fallback available.
+     */
+    @Nonnull
+    public static VideoType resolveForVolume(@Nonnull String url) {
+        VideoType specific = getTypeFromURL(url);
+        return specific != null ? specific : GENERIC_HTML5;
     }
 
     public String getTimeStampQuery() {

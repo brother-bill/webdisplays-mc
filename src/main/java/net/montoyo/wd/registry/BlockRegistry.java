@@ -3,7 +3,9 @@ package net.montoyo.wd.registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -11,6 +13,7 @@ import net.montoyo.wd.block.KeyboardBlockLeft;
 import net.montoyo.wd.block.KeyboardBlockRight;
 import net.montoyo.wd.block.PeripheralBlock;
 import net.montoyo.wd.block.ScreenBlock;
+import net.montoyo.wd.block.ScreenThinBlock;
 import net.montoyo.wd.core.DefaultPeripheral;
 
 public class BlockRegistry {
@@ -20,7 +23,16 @@ public class BlockRegistry {
 
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Registries.BLOCK, "webdisplays");
 
-    public static final DeferredHolder<Block, ScreenBlock> SCREEN_BLOCk = BLOCKS.register("screen", () -> new ScreenBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE)));
+    // Build Properties manually instead of ofFullCopy(STONE) — STONE carries requiresCorrectToolForDrops=true,
+    // which would force players to use a pickaxe. Original mod behavior is "always drop".
+    private static BlockBehaviour.Properties stoneLikeProps() {
+        return BlockBehaviour.Properties.of()
+                .mapColor(MapColor.STONE)
+                .sound(SoundType.STONE);
+    }
+
+    public static final DeferredHolder<Block, ScreenBlock> SCREEN_BLOCk = BLOCKS.register("screen", () -> new ScreenBlock(stoneLikeProps()));
+    public static final DeferredHolder<Block, ScreenThinBlock> SCREEN_THIN_BLOCK = BLOCKS.register("screen_thin", () -> new ScreenThinBlock(stoneLikeProps()));
 
     public static final DeferredHolder<Block, KeyboardBlockLeft> KEYBOARD_BLOCK = BlockRegistry.BLOCKS.register("kb_left", KeyboardBlockLeft::new);
     public static final DeferredHolder<Block, KeyboardBlockRight> blockKbRight = BLOCKS.register("kb_right", KeyboardBlockRight::new);

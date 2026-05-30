@@ -207,7 +207,7 @@ public class ScreenBlockEntity extends BlockEntity {
             ret.setupRedstoneStatus(level, getBlockPos());
 
             if (sendUpdate)
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, new S2CMessageAddScreen(this, ret));
+                WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, new S2CMessageAddScreen(this, ret));
         }
 
         screens.add(ret);
@@ -273,6 +273,7 @@ public class ScreenBlockEntity extends BlockEntity {
             return;
         }
 
+        String oldUrl = scr.url;
         String weburl = url(url);
 
         weburl = WebDisplays.applyBlacklist(weburl);
@@ -282,10 +283,23 @@ public class ScreenBlockEntity extends BlockEntity {
         scr.resetSyncState();
 
         if (level.isClientSide) {
-            if (scr.browser != null)
+            // MCEF gets into a stuck state when the browser navigates to about:blank — subsequent
+            // loadURL() calls don't render. To make Turn Off → Set New URL work, close & recreate
+            // the browser on ANY transition involving about:blank. Reported by BrotherBill 2026-05-29.
+            // Pure URL→URL transitions still use loadURL (cheap, keeps history/cookies).
+            boolean involvesBlank = "about:blank".equalsIgnoreCase(weburl)
+                                    || "about:blank".equalsIgnoreCase(oldUrl);
+            if (scr.browser != null && involvesBlank) {
+                scr.browser.close(true);
+                scr.browser = null;
+            }
+            if (scr.browser == null) {
+                scr.createBrowser(this, false);
+            } else {
                 scr.browser.loadURL(weburl);
+            }
         } else {
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.setURL(this, side, weburl));
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.setURL(this, side, weburl));
             setChanged();
         }
     }
@@ -311,7 +325,7 @@ public class ScreenBlockEntity extends BlockEntity {
                 screens.get(idx).browser = null;
             }
         } else
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, new S2CMessageScreenUpdate(this.getBlockPos(), side)); //Delete the screen
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, new S2CMessageScreenUpdate(this.getBlockPos(), side)); //Delete the screen
 
         screens.remove(idx);
 
@@ -346,7 +360,7 @@ public class ScreenBlockEntity extends BlockEntity {
                 scr.browser = null; //Will be re-created by renderer
             }
         } else {
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.setResolution(this, side, res));
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.setResolution(this, side, res));
             setChanged();
         }
     }
@@ -382,7 +396,7 @@ public class ScreenBlockEntity extends BlockEntity {
         if (level.isClientSide)
             Log.warning("TileEntityScreen.click() from client side is useless...");
         else if (getLaserUser(scr) == null)
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.click(this, side, ClickControl.ControlType.CLICK, vec));
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.click(this, side, ClickControl.ControlType.CLICK, vec));
     }
 
     public void handleMouseEvent(BlockSide side, ClickControl.ControlType event, @Nullable Vector2i vec, int button) {
@@ -598,46 +612,104 @@ public class ScreenBlockEntity extends BlockEntity {
 
         if (box == null) renderBB = new AABB(worldPosition);
         else renderBB = box.toMc();
+
+        // Inflate by 1 block per axis. The raw multiblock AABB is exactly the screen extent
+        // (often zero-thickness for axis-aligned screens), which triggers frustum culling
+        // when the camera rotates near the screen — symptom users reported as the screen
+        // "disappearing" or "turning off" when looking up/right on 16:9 multiblocks.
+        renderBB = renderBB.inflate(1.0);
+
+        Log.dbg("aabb", "pos=%s screens=%d renderBB=%s", worldPosition, screens.size(), renderBB);
     }
 
     @Nonnull
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
-        return renderBB;
+        // INFINITE bounds in diagnostic mode (-Dwebdisplays.diag=true) defeats frustum/chunk-section
+        // culling completely so we can isolate non-culling causes. In normal mode, return the
+        // inflated renderBB (computed in updateAABB).
+        return Log.RENDER_DIAG ? AABB.INFINITE : renderBB;
     }
 
-//	//FIXME: Not called if enableSoundDistance is false
-//	public void updateTrackDistance(double d, float masterVolume) {
-//		final WebDisplays wd = WebDisplays.INSTANCE;
-//		boolean needsComputation = true;
-//		int intPart = 0; //Need to initialize those because the compiler is stupid
-//		int fracPart = 0;
-//
-//		for (Screen scr : screens) {
-//			if (scr.autoVolume && scr.videoType != null && scr.browser != null && !scr.browser.isPageLoading()) {
-//				if (needsComputation) {
-//					float dist = (float) Math.sqrt(d);
-//					float vol;
-//
-//					if (dist <= wd.avDist100)
-//						vol = masterVolume * wd.ytVolume;
-//					else if (dist >= wd.avDist0)
-//						vol = 0.0f;
-//					else
-//						vol = (1.0f - (dist - wd.avDist100) / (wd.avDist0 - wd.avDist100)) * masterVolume * wd.ytVolume;
-//
-//					if (Math.abs(ytVolume - vol) < 0.5f)
-//						return; //Delta is too small
-//
-//					ytVolume = vol;
-//					intPart = (int) vol; //Manually convert to string, probably faster in that case...
-//					fracPart = ((int) (vol * 100.0f)) - intPart * 100;
-//					needsComputation = false;
-//				}
-//
-//				scr.browser.runJS(scr.videoType.getVolumeJSQuery(intPart, fracPart), "");
-//			}
-//		}
-//	}
+    /**
+     * Per-tick spatial-audio attenuation. Called from {@link net.montoyo.wd.client.ClientProxy}'s
+     * screen-tracker tick when the screen is active. The original mod had this commented out as a
+     * workaround for a no-longer-relevant bug, which left users hearing screens at full volume from
+     * miles away (P0 user report).
+     * Not called if enableSoundDistance is false?
+     *
+     * @param d              squared distance from camera/player to screen (as returned by SharedProxy.distanceTo)
+     * @param masterVolume   Minecraft master sound-source volume, scaled 0..1
+     */
+    // Throttle periodic audio status logging to once every ~3 sec per BE so logs aren't flooded.
+    private long lastAudioStatusLogMs = 0;
+
+    public void updateTrackDistance(double d, float masterVolume) {
+        final WebDisplays wd = WebDisplays.INSTANCE;
+        boolean needsComputation = true;
+        int intPart = 0;
+        int fracPart = 0;
+
+        // Periodic state dump for diagnostics. Always at INFO when AUDIO_DIAG flag is on,
+        // otherwise debug-only. Logs per-screen reason if audio update is being skipped.
+        // Throttled to ~1 sec in diag mode so the user can watch vol change as they walk.
+        boolean diagDue = Log.AUDIO_DIAG && (System.currentTimeMillis() - lastAudioStatusLogMs) >= 1000;
+        if (diagDue) {
+            lastAudioStatusLogMs = System.currentTimeMillis();
+            float dist = (float) Math.sqrt(d);
+            // Precompute the vol the same way the push loop will, so the diag line shows
+            // the *current* target volume — not just the cached `ytVolume` from the last push.
+            float volNow;
+            if (dist <= wd.avDist100) volNow = masterVolume * wd.ytVolume;
+            else if (dist >= wd.avDist0) volNow = 0.0f;
+            else volNow = (1.0f - (dist - wd.avDist100) / (wd.avDist0 - wd.avDist100)) * masterVolume * wd.ytVolume;
+            Log.info("[audiodiag] BE@%s dist=%.2f vol=%.1f%% (master=%.2f, cfg full@%.1f silent@%.1f, load@%.1f unload@%.1f) screens=%d",
+                    worldPosition, dist, volNow, masterVolume, wd.avDist100, wd.avDist0,
+                    Math.sqrt(wd.loadDistance2), Math.sqrt(wd.unloadDistance2), screens.size());
+            for (ScreenData scr : screens) {
+                String reason;
+                if (!scr.autoVolume) reason = "SKIP autoVolume=false";
+                else if (scr.browser == null) reason = "SKIP browser=null (not active)";
+                else if (scr.videoType == null) reason = "OK videoType=null -> using GENERIC_HTML5 fallback (covers <video>/<audio> elements on any URL)";
+                else reason = "OK videoType=" + scr.videoType.name();
+                Log.info("[audiodiag]   side=%s url=%s -> %s", scr.side, scr.url, reason);
+            }
+        }
+
+        float dist = (float) Math.sqrt(d);
+        float baseVol;
+        if (dist <= wd.avDist100) baseVol = masterVolume * wd.ytVolume;
+        else if (dist >= wd.avDist0) baseVol = 0.0f;
+        else baseVol = (1.0f - (dist - wd.avDist100) / (wd.avDist0 - wd.avDist100)) * masterVolume * wd.ytVolume;
+
+        for (ScreenData scr : screens) {
+            // autoVolume + browser are required. videoType is OPTIONAL — when null, we fall back
+            // to generic JS that sets volume on every <video>/<audio> element in the page
+            // (and same-origin iframes). This covers arbitrary URLs that aren't on the YouTube
+            // / sync_whitelist allowlist but still play HTML5 media (which is most of the modern web).
+            if (!scr.autoVolume || scr.browser == null) continue;
+
+            net.montoyo.wd.utilities.VideoType vt = scr.videoType != null
+                    ? scr.videoType
+                    : net.montoyo.wd.utilities.VideoType.GENERIC_HTML5;
+            // Final volume = distance attenuation × per-screen owner master (0..100 → 0..1).
+            float vol = baseVol * (scr.ownerVolume / 100.0f);
+
+            // Per-screen delta gate: skip JS push if vol hasn't changed enough since last push
+            // for THIS screen. Avoids hammering CEF with redundant evaluations.
+            if (Math.abs(scr.lastPushedVolume - vol) < 0.5f) continue;
+            scr.lastPushedVolume = vol;
+
+            int volInt = (int) vol;
+            int volFrac = ((int) (vol * 100.0f)) - volInt * 100;
+            if (Log.AUDIO_DIAG)
+                Log.info("[audiodiag] PUSH side=%s vol=%.2f (ownerVol=%d%%) int=%d frac=%d",
+                        scr.side, vol, scr.ownerVolume, volInt, volFrac);
+            Log.dbg("audio", "pos=%s side=%s dist=%.2f vol=%.2f (master=%.2f, ownerVol=%d, ytMax=%.0f)",
+                    worldPosition, scr.side, dist, vol, masterVolume, scr.ownerVolume, wd.ytVolume);
+
+            scr.browser.executeJavaScript(vt.getVolumeJSQuery(volInt, volFrac), "", 0);
+        }
+    }
 
     public void updateClientSideURL(CefBrowser target, String url) {
         for (ScreenData scr : screens) {
@@ -855,7 +927,7 @@ public class ScreenBlockEntity extends BlockEntity {
 
         scr.upgrades.add(isCopy);
         if (player != null && !player.level().isClientSide) {
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.upgrade(this, side, true, is));
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.upgrade(this, side, true, is));
             itemAsUpgrade.onInstall(this, side, player, isCopy);
             playSoundAt(WebDisplays.INSTANCE.soundUpgradeAdd, getBlockPos(), 1.0f, 1.0f);
         }
@@ -919,7 +991,7 @@ public class ScreenBlockEntity extends BlockEntity {
             dropUpgrade(scr.upgrades.get(idxToRemove), side, player);
             scr.upgrades.remove(idxToRemove);
             if (player != null && !player.level().isClientSide) {
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.upgrade(this, side, false, is));
+                WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.upgrade(this, side, false, is));
                 playSoundAt(WebDisplays.INSTANCE.soundUpgradeDel, getBlockPos(), 1.0f, 1.0f);
             }
             setChanged();
@@ -974,10 +1046,10 @@ public class ScreenBlockEntity extends BlockEntity {
         if (scr != null) {
             if (down) {
                 // Button press event
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.DOWN, pos, button));
+                WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.DOWN, pos, button));
             } else {
                 // Move event (with or without button held for drag)
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.MOVE, pos, button));
+                WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.MOVE, pos, button));
             }
         }
     }
@@ -988,7 +1060,7 @@ public class ScreenBlockEntity extends BlockEntity {
         if (scr != null) {
             if (getLaserUser(scr) == ply) {
                 scr.laserUser = null;
-                WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.UP, null, button));
+                WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.laserEvent(this, side, ClickControl.ControlType.UP, null, button));
             }
         }
     }
@@ -999,7 +1071,7 @@ public class ScreenBlockEntity extends BlockEntity {
             scr.upgrades.clear();
         }
 
-        WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.turnOff(getBlockPos(), null));
+        WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.turnOff(getBlockPos(), null));
     }
 
     public void disableScreen(BlockSide side) {
@@ -1042,7 +1114,7 @@ public class ScreenBlockEntity extends BlockEntity {
         }
 
         scr.owner = new NameUUIDPair(newOwner.getGameProfile());
-        WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.owner(this, side, scr.owner));
+        WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.owner(this, side, scr.owner));
         checkLaserUserRights(scr);
         setChanged();
     }
@@ -1066,7 +1138,7 @@ public class ScreenBlockEntity extends BlockEntity {
             }
         } else {
             scr.rotation = rot;
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.rotation(this, side, rot));
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.rotation(this, side, rot));
             setChanged();
         }
     }
@@ -1097,7 +1169,23 @@ public class ScreenBlockEntity extends BlockEntity {
         if (level.isClientSide)
             WebDisplays.PROXY.screenUpdateAutoVolumeInGui(new Vector3i(getBlockPos()), side, av);
         else {
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.autoVolume(this, side, av));
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.autoVolume(this, side, av));
+            setChanged();
+        }
+    }
+
+    public void setOwnerVolume(BlockSide side, int vol) {
+        ScreenData scr = getScreen(side);
+        if (scr == null) {
+            Log.error("Trying to set owner volume on invalid screen (side %s)", side.toString());
+            return;
+        }
+        scr.ownerVolume = Math.max(0, Math.min(100, vol));
+        scr.lastPushedVolume = -1.0f; // force next updateTrackDistance to push JS with new vol
+
+        if (!level.isClientSide) {
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius,
+                    S2CMessageScreenUpdate.ownerVolume(this, side, scr.ownerVolume));
             setChanged();
         }
     }
@@ -1115,7 +1203,7 @@ public class ScreenBlockEntity extends BlockEntity {
         if (level.isClientSide)
             WebDisplays.PROXY.screenUpdateSyncEnabledInGui(new Vector3i(getBlockPos()), side, enabled);
         else {
-            WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.syncEnabled(this, side, enabled));
+            WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.syncEnabled(this, side, enabled));
             setChanged();
         }
     }
@@ -1129,10 +1217,16 @@ public class ScreenBlockEntity extends BlockEntity {
             Log.error("broadcastToWatchers called on client side");
             return;
         }
-        WDNetworkRegistry.sendToNear(level, getBlockPos(), 64.0, S2CMessageScreenUpdate.fromControl(this, side, control));
+        WDNetworkRegistry.sendToNear(level, getBlockPos(), WebDisplays.INSTANCE.screenBroadcastRadius, S2CMessageScreenUpdate.fromControl(this, side, control));
     }
 
     public void deactivate() {
+        boolean any = false;
+        for (ScreenData screen : screens) {
+            if (screen.browser != null) { any = true; break; }
+        }
+        if (!any) return; // idempotent — was being called every tick and spamming logs
+        Log.dbg("activate", "deactivate pos=%s screens=%d", worldPosition, screens.size());
         for (ScreenData screen : screens) {
             if (screen.browser != null) {
                 screen.browser.close(true);
@@ -1142,6 +1236,12 @@ public class ScreenBlockEntity extends BlockEntity {
     }
 
     public void activate() {
+        boolean anyMissing = false;
+        for (ScreenData screen : screens) {
+            if (screen.browser == null) { anyMissing = true; break; }
+        }
+        if (!anyMissing) return; // idempotent
+        Log.dbg("activate", "activate pos=%s screens=%d", worldPosition, screens.size());
         for (ScreenData screen : screens) {
             if (screen.browser == null)
                 screen.createBrowser(this, false);

@@ -53,7 +53,7 @@ public class ScreenBaker implements BakedModel {
 		
 		for (int i = 0; i < texs.length; i++) {
 			texs[i] = spriteGetter.apply(ScreenModelLoader.MATERIALS_SIDES[i]);
-			Log.info("[WD Debug] ScreenBaker texture %d: %s (sprite name: %s)", i,
+			Log.dbg("baker", "ScreenBaker texture %d: %s (sprite name: %s)", i,
 				ScreenModelLoader.MATERIALS_SIDES[i].texture(),
 				texs[i] != null ? texs[i].contents().name() : "NULL");
 		}
@@ -135,9 +135,9 @@ public class ScreenBaker implements BakedModel {
 	public @NotNull List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand, @NotNull ModelData data, @Nullable RenderType renderType) {
 		if (side == null)
 			return noQuads;
-		
+
 		List<BakedQuad> ret = new ArrayList<>();
-		
+
 		int sid = BlockSide.reverse(side.ordinal());
 		BlockSide s = blockSides[sid];
 		TextureAtlasSprite tex = texs[15];

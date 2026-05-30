@@ -42,7 +42,12 @@ public class PeripheralBlock extends WDContainerBlock {
     DefaultPeripheral type;
 
     public PeripheralBlock(DefaultPeripheral type) {
-        super(BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).strength(1.5f, 10.f));
+        // Build Properties manually — ofFullCopy(STONE) carries requiresCorrectToolForDrops=true,
+        // which would force pickaxe-only drops. Original mod always drops.
+        super(BlockBehaviour.Properties.of()
+                .mapColor(net.minecraft.world.level.material.MapColor.STONE)
+                .sound(net.minecraft.world.level.block.SoundType.STONE)
+                .strength(1.5f, 10.f));
         this.type = type;
     }
 

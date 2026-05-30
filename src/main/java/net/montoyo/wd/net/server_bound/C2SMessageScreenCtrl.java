@@ -152,6 +152,12 @@ public class C2SMessageScreenCtrl extends Packet {
         return ret;
     }
 
+    public static C2SMessageScreenCtrl ownerVol(ScreenBlockEntity tes, BlockSide side, int vol) {
+        C2SMessageScreenCtrl ret = base(tes, side);
+        ret.control = new OwnerVolumeControl(vol);
+        return ret;
+    }
+
     /**
      * Toggle video sync enabled/disabled for a screen.
      */

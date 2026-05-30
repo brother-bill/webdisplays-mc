@@ -109,6 +109,12 @@ public class S2CMessageScreenUpdate extends Packet {
         return screenUpdate;
     }
 
+    public static S2CMessageScreenUpdate ownerVolume(ScreenBlockEntity screen, BlockSide side, int vol) {
+        S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
+        screenUpdate.control = new net.montoyo.wd.controls.builtin.OwnerVolumeControl(vol);
+        return screenUpdate;
+    }
+
     public static S2CMessageScreenUpdate syncEnabled(ScreenBlockEntity screen, BlockSide side, boolean enabled) {
         S2CMessageScreenUpdate screenUpdate = new S2CMessageScreenUpdate(screen.getBlockPos(), side);
         screenUpdate.control = new SyncEnabledControl(enabled);

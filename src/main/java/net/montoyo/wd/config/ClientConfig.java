@@ -22,15 +22,15 @@ public class ClientConfig {
 	@Comment("How far (in blocks) you can be before a screen starts rendering")
 	@Translation("config.webdisplays.load_distance")
 	@DoubleRange(minV = 0, maxV = Double.MAX_VALUE)
-	@Default(valueD = 30)
-	public static double loadDistance = 30.0;
+	@Default(valueD = 60)
+	public static double loadDistance = 60.0;
 
 	@Name("unload_distance")
-	@Comment("How far you can be before a screen stops rendering")
+	@Comment("How far you can be before a screen stops rendering. Must be larger than load_distance.")
 	@Translation("config.webdisplays.unload_distance")
 	@DoubleRange(minV = 0, maxV = Double.MAX_VALUE)
-	@Default(valueD = 32)
-	public static double unloadDistance = 32.0;
+	@Default(valueD = 64)
+	public static double unloadDistance = 64.0;
 
 	@Name("pad_resolution")
 	@Comment({
@@ -66,6 +66,46 @@ public class ClientConfig {
 	@Default(valueBoolean = true)
 	public static boolean sidePad = true;
 
+	@Name("enable_spatial_audio")
+	@Comment({
+			"If true, video/audio playing on screens attenuates with distance (gets quieter as you walk away).",
+			"If false, screen audio plays at full volume regardless of distance (the old broken behavior — fixes user reports of audio being audible from miles away)."
+	})
+	@Translation("config.webdisplays.enable_spatial_audio")
+	@Default(valueBoolean = true)
+	public static boolean enableSpatialAudio = true;
+
+	@Name("audio_full_volume_distance")
+	@Comment({
+			"Distance (in blocks) at which screen audio plays at full volume.",
+			"Below this distance, no attenuation is applied."
+	})
+	@Translation("config.webdisplays.audio_full_volume_distance")
+	@DoubleRange(minV = 0, maxV = 1000)
+	@Default(valueD = 5.0)
+	public static double audioFullVolumeDistance = 5.0;
+
+	@Name("audio_silent_distance")
+	@Comment({
+			"Distance (in blocks) at which screen audio is fully muted.",
+			"Between full-volume distance and this, volume scales linearly.",
+			"Default matches unload_distance so audio fades to silent right as the screen visually unloads."
+	})
+	@Translation("config.webdisplays.audio_silent_distance")
+	@DoubleRange(minV = 1, maxV = 1000)
+	@Default(valueD = 64.0)
+	public static double audioSilentDistance = 64.0;
+
+	@Name("audio_max_volume_percent")
+	@Comment({
+			"Maximum volume (0-100) screen audio will play at when at or below the full-volume distance.",
+			"Lower values cap the loudness of screens overall."
+	})
+	@Translation("config.webdisplays.audio_max_volume_percent")
+	@DoubleRange(minV = 0, maxV = 100)
+	@Default(valueD = 100.0)
+	public static double audioMaxVolumePercent = 100.0;
+
 	@Comment({
 			"Options relating to input handling"
 	})
@@ -92,6 +132,8 @@ public class ClientConfig {
 	public static void postLoad() {
 		if (unloadDistance < loadDistance + 2.0)
 			unloadDistance = loadDistance + 2.0;
+		if (audioSilentDistance < audioFullVolumeDistance + 1.0)
+			audioSilentDistance = audioFullVolumeDistance + 1.0;
 
 		// cache pad resolution
 		WebDisplays.INSTANCE.padResY = padResolution;
@@ -100,5 +142,10 @@ public class ClientConfig {
 		// cache unload/load distances
 		WebDisplays.INSTANCE.unloadDistance2 = unloadDistance * unloadDistance;
 		WebDisplays.INSTANCE.loadDistance2 = loadDistance * loadDistance;
+
+		// cache audio attenuation params (read by ScreenBlockEntity.updateTrackDistance)
+		WebDisplays.INSTANCE.ytVolume = (float) audioMaxVolumePercent;
+		WebDisplays.INSTANCE.avDist100 = (float) audioFullVolumeDistance;
+		WebDisplays.INSTANCE.avDist0 = (float) audioSilentDistance;
 	}
 }

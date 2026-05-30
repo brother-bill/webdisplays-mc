@@ -37,6 +37,17 @@ public class CommonConfig {
 	@Default(valueBoolean = false)
 	public static boolean disableOwnershipThief = false;
 
+	@Name("screen_broadcast_radius")
+	@Comment({
+			"Radius (in blocks) within which the server broadcasts screen updates (URL changes, ",
+			"clicks, sync state, etc.) to players. Default 128 covers larger venues like cinemas. ",
+			"Players outside this radius won't receive updates even if their client load_distance is higher."
+	})
+	@Translation("config.webdisplays.screen_broadcast_radius")
+	@IntRange(minV = 16, maxV = 512)
+	@Default(valueI = 128)
+	public static int screenBroadcastRadius = 128;
+
 	@Comment("Options for the browsers (both the minePad and the screens)")
 	@CFGSegment("browser_options")
 	public static class Browser {
@@ -137,5 +148,6 @@ public class CommonConfig {
 	public static void postLoad() {
 		WebDisplays.INSTANCE.miniservPort = MiniServ.miniservPort;
 		WebDisplays.INSTANCE.miniservQuota = MiniServ.miniservQuota * 1024L;
+		WebDisplays.INSTANCE.screenBroadcastRadius = screenBroadcastRadius;
 	}
 }

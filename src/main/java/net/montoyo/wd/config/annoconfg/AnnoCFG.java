@@ -12,6 +12,7 @@ import net.montoyo.wd.config.annoconfg.annotation.value.IntRange;
 import net.montoyo.wd.config.annoconfg.annotation.value.LongRange;
 import net.montoyo.wd.config.annoconfg.handle.UnsafeHandle;
 import net.montoyo.wd.config.annoconfg.util.EnumType;
+import net.montoyo.wd.utilities.Log;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
@@ -29,10 +30,17 @@ public class AnnoCFG {
 	private final Method postInit;
 
 	public AnnoCFG(IEventBus bus, Class<?> clazz) {
-		bus.addListener(this::onConfigChange);
+		// ModConfigEvent is abstract sealed — must subscribe to concrete subclasses
+		// (Loading + Reloading) so the listener actually fires. Previously subscribed
+		// to ModConfigEvent itself, which never fires directly → spec values were
+		// never copied into static fields, postLoad cached defaults into WebDisplays.INSTANCE.
+		bus.addListener((ModConfigEvent.Loading e) -> onConfigChange(e));
+		bus.addListener((ModConfigEvent.Reloading e) -> onConfigChange(e));
+		Log.dbg("config-init", "AnnoCFG ctor for %s", clazz.getSimpleName());
 		ModConfigSpec.Builder configBuilder = new ModConfigSpec.Builder();
 		setup("", configBuilder, clazz);
 		configs.add(this);
+		Log.dbg("config-init", "spec built for %s: mySpec=%s, handles=%d", clazz.getSimpleName(), mySpec, handles.size());
 
 		Method m = null;
 		try {
@@ -197,19 +205,24 @@ public class AnnoCFG {
 	}
 
 	public void onConfigChange(ModConfigEvent event) {
-		if (
-				event.getConfig().getSpec().equals(mySpec) ||
-						event.getConfig().getSpec() == mySpec
-		) {
-			for (String s : handles.keySet()) {
-				ConfigEntry entry = handles.get(s);
-				entry.handle.set(entry.supplier.get());
-			}
+		boolean match = event.getConfig().getSpec() == mySpec || event.getConfig().getSpec().equals(mySpec);
+		Log.dbg("config-evt", "fired: eventClass=%s, eventSpec=%s, mySpec=%s, match=%b",
+				event.getClass().getSimpleName(), event.getConfig().getSpec(), mySpec, match);
+		if (!match) return; // only act on our own config
+
+		for (String s : handles.keySet()) {
+			ConfigEntry entry = handles.get(s);
+			entry.handle.set(entry.supplier.get());
 		}
-		try {
-			postInit.invoke(null);
-		} catch (Throwable err) {
-			err.printStackTrace();
+		Log.dbg("config-evt", "synced %d handles", handles.size());
+
+		if (postInit != null) {
+			try {
+				postInit.invoke(null);
+				Log.dbg("config-evt", "postLoad invoked");
+			} catch (Throwable err) {
+				err.printStackTrace();
+			}
 		}
 	}
 

@@ -87,6 +87,7 @@ import net.montoyo.wd.utilities.data.Rotation;
 import net.montoyo.wd.utilities.math.Vector2i;
 import net.montoyo.wd.utilities.math.Vector3i;
 import net.montoyo.wd.utilities.serialization.NameUUIDPair;
+import net.montoyo.wd.config.ClientConfig;
 import net.montoyo.wd.config.CommonConfig;
 import net.montoyo.wd.net.WDNetworkRegistry;
 import net.montoyo.wd.net.server_bound.C2SMessageScreenCtrl;
@@ -268,6 +269,7 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 
 	public static void onModelRegistryEvent(ModelEvent.RegisterGeometryLoaders event) {
 		event.register(ScreenModelLoader.SCREEN_LOADER, new ScreenModelLoader());
+		event.register(ScreenThinModelLoader.LOADER_ID, new ScreenThinModelLoader());
 	}
 	
 	@Override
@@ -622,13 +624,24 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 			if (entity != null) {
 				double dist = distanceTo(tes, entity.getPosition(0));
 
-				if (tes.isLoaded()) {
-					if (dist > WebDisplays.INSTANCE.unloadDistance2 * 16)
-						tes.deactivate();
-//					else if (ClientConfig.AutoVolumeControl.enableAutoVolume)
-//						tes.updateTrackDistance(dist, 80); //ToDo find master volume
-				} else if (dist <= WebDisplays.INSTANCE.loadDistance2 * 16)
+				// Distance is squared blocks. Hysteresis: deactivate beyond unloadDistance²,
+				// (re)activate within loadDistance². In the band between the two, do nothing
+				// (avoids thrashing at the boundary). activate() and deactivate() are idempotent.
+				//
+				// Prior code gated all this behind isLoaded() which is the BE-alive flag, NOT the
+				// browser-active state — so once browsers were closed via deactivate(), the
+				// activate branch never re-fired (isLoaded stayed true), and the screen would
+				// never come back on when the player walked back into range.
+				if (dist > WebDisplays.INSTANCE.unloadDistance2) {
+					tes.deactivate();
+				} else if (dist <= WebDisplays.INSTANCE.loadDistance2) {
 					tes.activate();
+					if (ClientConfig.enableSpatialAudio) {
+						float masterVol = mc.options.getSoundSourceVolume(net.minecraft.sounds.SoundSource.MASTER);
+						tes.updateTrackDistance(dist, masterVol);
+					}
+				}
+				// else: hysteresis zone — keep current state
 			}
 		}
 
@@ -923,19 +936,51 @@ public class ClientProxy extends SharedProxy implements ResourceManagerReloadLis
 		if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_F1)) {
 			if (!isF1Down) {
 				isF1Down = true;
-				
+
 				String wikiName = null;
-				if (mc.screen instanceof WDScreen)
+				String screenType = mc.screen == null ? "null" : mc.screen.getClass().getSimpleName();
+				if (mc.screen instanceof WDScreen) {
 					wikiName = ((WDScreen) mc.screen).getWikiPageName();
-				else if (mc.screen instanceof AbstractContainerScreen) {
+				} else if (mc.screen instanceof AbstractContainerScreen) {
 					Slot slot = ((AbstractContainerScreen) mc.screen).getSlotUnderMouse();
-					
-					if (slot != null && slot.hasItem() && slot.getItem().getItem() instanceof WDItem)
-						wikiName = ((WDItem) slot.getItem().getItem()).getWikiName(slot.getItem());
+					if (slot != null && slot.hasItem()) {
+						net.minecraft.world.item.Item item = slot.getItem().getItem();
+						if (item instanceof WDItem) {
+							wikiName = ((WDItem) item).getWikiName(slot.getItem());
+						} else {
+							// Block-items (keyboard, screen, peripheral, etc.) don't implement WDItem.
+							// Derive wiki name from registry path if it's a WebDisplays item.
+							net.minecraft.resources.ResourceLocation rl = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+							if (rl != null && "webdisplays".equals(rl.getNamespace())) {
+								// Capitalize first letter for wiki convention (e.g. "screen" -> "Screen")
+								String path = rl.getPath();
+								wikiName = path.isEmpty() ? null
+										: Character.toUpperCase(path.charAt(0)) + path.substring(1);
+							}
+						}
+						Log.dbg("f1", "in container screen=%s, item=%s wikiName=%s",
+								screenType, item.getClass().getSimpleName(), wikiName);
+					} else {
+						Log.dbg("f1", "in container screen=%s, no slot/item under mouse", screenType);
+					}
+				} else {
+					Log.dbg("f1", "screen=%s (not a WD screen or container)", screenType);
 				}
-				
-//				if (wikiName != null)
-//					mcef.openExampleBrowser("https://montoyo.net/wdwiki/index.php/" + wikiName);
+
+				Log.dbg("f1", "wikiName=%s", wikiName);
+
+				if (wikiName != null) {
+					// Open in player's default browser via Minecraft's util. The old call used
+					// MCEF's openExampleBrowser which no longer exists; opening externally is
+					// the standard Minecraft pattern for wiki links (used by mods like JEI).
+					try {
+						String url = "https://montoyo.net/wdwiki/index.php/" + wikiName;
+						Log.dbg("f1", "opening URI: %s", url);
+						net.minecraft.Util.getPlatform().openUri(new java.net.URI(url));
+					} catch (java.net.URISyntaxException e) {
+						Log.warningEx("Failed to open wiki page for '%s'", e, wikiName);
+					}
+				}
 			}
 		} else if (isF1Down)
 			isF1Down = false;
